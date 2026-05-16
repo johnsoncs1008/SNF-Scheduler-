@@ -1,0 +1,2986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNF Provider Scheduler</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--sf:#161b22;--sb:#0d1117;--bd:#21262d;
+  --tx:#e6edf3;--mu:#7d8590;--ac:#58a6ff;--gr:#3fb950;
+  --am:#d29922;--re:#f85149;--pu:#a371f7;--pi:#f778ba;
+  --si:#79c0ff;
+}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh}
+/* ── LAYOUT ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{padding:18px 16px 12px;font-weight:700;font-size:15px;color:var(--ac);border-bottom:1px solid var(--bd)}
+.sb-logo span{font-size:10px;color:var(--mu);display:block;font-weight:400;margin-top:2px}
+.sb-nav{flex:1;padding:8px 0;overflow-y:auto}
+.nb{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:var(--mu);font-size:13px;border:none;background:none;width:100%;text-align:left;border-radius:0;transition:all .15s}
+.nb:hover{background:rgba(88,166,255,.08);color:var(--tx)}
+.nb.act{background:rgba(88,166,255,.12);color:var(--ac);font-weight:600}
+.nb .ico{width:16px;text-align:center;font-size:15px}
+.sb-foot{padding:12px 16px;border-top:1px solid var(--bd);font-size:11px;color:var(--mu)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.page{display:none;flex:1;padding:20px}
+.page.active{display:block}
+/* ── COMPONENTS ── */
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.pt{font-size:20px;font-weight:700}
+.ps{font-size:12px;color:var(--mu);margin-top:2px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:14px}
+.stit{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.btn{padding:6px 14px;border-radius:7px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);cursor:pointer;font-size:13px;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--ac);color:var(--ac)}
+.btn.bp{background:var(--ac);border-color:var(--ac);color:#000;font-weight:600}
+.btn.bp:hover{opacity:.85}
+.btn.br{background:rgba(248,81,73,.15);border-color:rgba(248,81,73,.4);color:var(--re)}
+.btn.bg{background:rgba(63,185,80,.15);border-color:rgba(63,185,80,.4);color:var(--gr)}
+.btn.bam{background:rgba(210,153,34,.15);border-color:rgba(210,153,34,.4);color:var(--am)}
+.btn.bpu{background:rgba(163,113,247,.15);border-color:rgba(163,113,247,.4);color:var(--pu)}
+.btn.bsm{padding:3px 9px;font-size:11px}
+.inp,.sel,.txta{background:var(--sb);border:1px solid var(--bd);border-radius:7px;color:var(--tx);padding:7px 10px;font-size:13px;font-family:inherit;width:100%}
+.inp:focus,.sel:focus,.txta:focus{outline:none;border-color:var(--ac)}
+.txta{resize:vertical;min-height:80px}
+.lbl{display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.c2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.ibox{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-radius:7px;padding:10px 13px;font-size:12px;color:var(--si);margin-bottom:4px}
+.wbox{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--am)}
+.empty{color:var(--mu);text-align:center;padding:24px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;color:var(--mu);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--bd)}
+td{padding:8px 10px;border-bottom:1px solid rgba(33,38,45,.6);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tw{overflow-x:auto}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{padding:5px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--mu);cursor:pointer;font-size:12px;font-family:inherit}
+.tab:hover{border-color:var(--ac);color:var(--ac)}
+.tab.act{background:rgba(88,166,255,.15);border-color:var(--ac);color:var(--ac);font-weight:600}
+.prg{height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:4px}
+.prf{height:100%;border-radius:3px;transition:width .3s}
+.mono{font-family:'Courier New',monospace}
+/* ── STAT CARDS ── */
+.sc{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:14px}
+.sl{font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.sv{font-size:28px;font-weight:700;line-height:1}
+.ss{font-size:11px;color:var(--mu);margin-top:4px}
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap}
+.bb{background:rgba(88,166,255,.15);color:var(--ac)}
+.bg_{background:rgba(63,185,80,.15);color:var(--gr)}
+.ba{background:rgba(210,153,34,.15);color:var(--am)}
+.br_{background:rgba(248,81,73,.15);color:var(--re)}
+.bp_{background:rgba(88,166,255,.15);color:var(--ac)}
+.bpu_{background:rgba(163,113,247,.15);color:var(--pu)}
+.bx{background:var(--bd);color:var(--mu)}
+/* ── SCHEDULE GRID ── */
+.sched-grid{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+.day-col{background:var(--sb);border:1px solid var(--bd);border-radius:8px;min-width:165px;max-width:200px;flex-shrink:0}
+.day-head{padding:8px 10px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+.day-name{font-size:11px;font-weight:700;color:var(--mu)}
+.day-cnt{font-size:11px;font-weight:700}
+.day-cnt.good{color:var(--gr)}
+.day-cnt.warn{color:var(--am)}
+.day-cnt.over{color:var(--re)}
+.vchip{padding:5px 8px;margin:4px 6px;border-radius:6px;border:1px solid var(--bd);font-size:11px;display:flex;align-items:center;gap:4px;cursor:default}
+.vchip .vname{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vchip .vtype{font-size:9px;color:var(--mu);margin-top:1px}
+.vchip .vbtn{border:none;background:none;cursor:pointer;color:var(--mu);padding:1px 3px;font-size:11px;border-radius:3px;flex-shrink:0}
+.vchip .vbtn:hover{color:var(--re);background:rgba(248,81,73,.1)}
+.vchip .vok{border:none;background:none;cursor:pointer;color:var(--mu);padding:1px 3px;font-size:11px;border-radius:3px;flex-shrink:0}
+.vchip .vok:hover{color:var(--gr);background:rgba(63,185,80,.1)}
+.vchip.done{opacity:.55}
+/* visit type colors */
+.vc-lt{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.2)}
+.vc-fu{background:rgba(121,192,255,.06);border-color:rgba(121,192,255,.15)}
+/* Skilled visits — bright amber, stands out clearly */
+.vc-sk{background:rgba(210,153,34,.18);border-color:rgba(210,153,34,.6);border-left:3px solid #d29922!important}
+.vc-sk .vname{color:#fbbf24}
+.vc-na{background:rgba(163,113,247,.18);border-color:rgba(163,113,247,.6);border-left:3px solid #a371f7!important}
+.vc-aw{background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.2)}
+.vc-md{background:rgba(247,120,186,.08);border-color:rgba(247,120,186,.2)}
+.vc-lp{background:rgba(63,185,80,.06);border-color:rgba(63,185,80,.15)}
+.vc-op{border-style:dashed;opacity:.8}
+/* ── MODALS ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}
+.ov.open{display:flex}
+.modal{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-lg{max-width:680px}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.mh h3{font-size:15px;font-weight:700}
+.g12{display:grid;gap:12px}
+/* ── DROPZONE ── */
+.dz{border:2px dashed var(--bd);border-radius:8px;padding:24px;text-align:center;cursor:pointer;color:var(--mu);font-size:13px;transition:all .15s}
+.dz:hover,.dz.drag{border-color:var(--ac);color:var(--ac)}
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1c2128;border:1px solid var(--bd);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--tx);z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:320px}
+/* ── LOADER ── */
+#loader{position:fixed;inset:0;background:rgba(13,17,23,.95);z-index:9990;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.spin{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── PW GATE ── */
+#pw-gate{position:fixed;inset:0;background:#0d1117;z-index:99999;display:flex;align-items:center;justify-content:center}
+.pw-box{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:32px;width:340px;text-align:center}
+.pw-box h2{font-size:18px;font-weight:700;margin-bottom:6px}
+.pw-box p{font-size:12px;color:var(--mu);margin-bottom:20px}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}60%{transform:translateX(8px)}}
+/* ── OPTIONAL VISIT INDICATOR ── */
+.opt-badge{font-size:9px;color:var(--mu);border:1px dashed var(--mu);border-radius:3px;padding:0 4px;margin-left:4px}
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{width:180px}
+  .g4{grid-template-columns:1fr 1fr}
+  .g2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate">
+  <div class="pw-box" id="pw-box">
+    <h2>SNF Scheduler</h2>
+    <p>Enter your access password</p>
+    <input id="pw-in" type="password" class="inp" placeholder="Password" style="margin-bottom:10px;text-align:center" onkeydown="if(event.key==='Enter')checkPW()">
+    <div id="pw-err" style="color:var(--re);font-size:12px;min-height:16px;margin-bottom:10px"></div>
+    <button class="btn bp" style="width:100%" onclick="checkPW()">Sign In</button>
+  </div>
+</div>
+
+<!-- LOADER -->
+<div id="loader" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.95);z-index:9990;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div class="spin"></div>
+  <div id="loader-msg" style="font-size:13px;color:var(--mu)">Loading…</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- APP -->
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-logo">SNF Scheduler<span>Provider Visit Management</span></div>
+    <div class="sb-nav">
+      <button class="nb act" onclick="nav('dash',this)"><span class="ico">📊</span>Dashboard</button>
+      <button class="nb" onclick="nav('facs',this)"><span class="ico">🏥</span>Facilities</button>
+      <button class="nb" onclick="nav('allpats',this)"><span class="ico">👥</span>All Patients</button>
+      <button class="nb" onclick="nav('allvis',this)"><span class="ico">📅</span>All Visits</button>
+      <button class="nb" onclick="nav('rules',this)"><span class="ico">⚙️</span>Schedule Rules</button>
+    </div>
+    <div class="sb-foot" id="sb-foot"></div>
+    <div id="db-status" style="padding:6px 16px;font-size:11px;border-top:1px solid var(--bd)">
+      <span id="db-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--am);margin-right:6px"></span>
+      <span id="db-status-txt">Connecting…</span>
+    </div>
+    <div style="padding:6px 16px 10px;border-top:1px solid var(--bd)">
+      <button class="btn bsm" style="width:100%;font-size:10px" onclick="runDbDiagnostics()">🔍 DB Diagnostics</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dash" class="page active">
+      <div class="ph">
+        <div><div class="pt">Dashboard</div><div class="ps" id="dash-date"></div></div>
+        <div class="row">
+          <select id="dash-fac-filter" class="sel" style="width:auto" onchange="renderDash()"><option value="">All Facilities</option></select>
+        </div>
+      </div>
+      <div class="g4" id="dash-stats" style="margin-bottom:14px"></div>
+      <!-- Provider daily schedule -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div class="stit" style="margin-bottom:0">📋 Provider Daily Schedule</div>
+          <div class="row">
+            <input type="date" id="dash-date-pick" style="background:var(--sf);border:1px solid var(--bd);color:var(--tx);padding:5px 10px;border-radius:6px;font-size:13px" onchange="renderDash()">
+            <button class="btn" style="font-size:12px;padding:4px 10px" onclick="$i('dash-date-pick').value=todayStr();renderDash()">Today</button>
+          </div>
+        </div>
+        <div id="dash-provider-sched"></div>
+      </div>
+      <!-- Monthly provider visit tracker -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="stit" style="margin-bottom:2px">📊 Monthly Provider Visit Tracker</div>
+            <div style="font-size:11px;color:var(--mu)">Total visits scheduled per provider this month — across all facilities</div>
+          </div>
+          <select id="dash-month-pick" class="sel" style="width:auto;font-size:12px" onchange="renderDash()">
+            <option value="-1">Last Month</option>
+            <option value="0" selected>This Month</option>
+            <option value="1">Next Month</option>
+            <option value="2">2 Months Ahead</option>
+          </select>
+        </div>
+        <div id="dash-monthly-tracker"></div>
+      </div>
+      <!-- Counseling & Preventive Tracker -->
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="stit" style="margin-bottom:2px">🩺 Wellness &amp; Preventive Counseling Tracker</div>
+            <div style="font-size:11px;color:var(--mu)">Annual Wellness · Semi-Annual · Smoking Cessation (8×/yr) · Alcohol Counseling (6×/yr) · Advance Care Planning</div>
+          </div>
+          <select id="dash-counsel-fac" class="sel" style="width:auto;font-size:12px" onchange="renderDash()"><option value="">All Facilities</option></select>
+        </div>
+        <div id="dash-counsel-tracker"></div>
+      </div>
+      <div class="g2">
+        <div class="card"><div class="stit">Upcoming 7 Days</div><div id="dash-upcoming"></div></div>
+        <div class="card"><div class="stit">Facility Snapshot</div><div id="dash-snapshot"></div></div>
+      </div>
+    </div>
+
+    <!-- FACILITIES -->
+    <div id="page-facs" class="page">
+      <div class="ph">
+        <div><div class="pt">Facilities</div><div class="ps" id="facs-sub"></div></div>
+        <button class="btn bp" onclick="openModal('m-addfac')">+ Add Facility</button>
+      </div>
+      <div class="g2" id="fac-grid"></div>
+    </div>
+
+    <!-- FACILITY DETAIL -->
+    <div id="page-fd" class="page">
+      <div class="ph">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn bsm" onclick="nav('facs',document.querySelector('.nb:nth-child(2)'))">← Back</button>
+          <div><div class="pt" id="fd-title"></div><div class="ps" id="fd-sub"></div></div>
+        </div>
+        <div class="row">
+          <button class="btn bsm" onclick="openEditFac(curFid)">✏ Edit Facility</button>
+          <button class="btn bam bsm" onclick="openBulk()">⬆ Bulk Upload</button>
+          <button class="btn bsm" onclick="openAddPat()">+ Add Patient</button>
+          <button class="btn bp bsm" onclick="applyRules()">⚡ Apply Rules</button>
+        </div>
+      </div>
+      <div class="g4" id="fd-stats" style="margin-bottom:14px"></div>
+      <!-- Provider tabs -->
+      <div class="tabs" style="margin-bottom:14px" id="fd-tabs">
+        <button class="tab act" onclick="setFdTab('np',this)">🩺 NP Schedule</button>
+        <button class="tab" onclick="setFdTab('md',this)">👨‍⚕️ Physician Schedule</button>
+        <button class="tab" onclick="setFdTab('lpn',this)" style="color:var(--gr)">💊 LPN Schedule</button>
+        <button class="tab" onclick="setFdTab('psych',this)" style="color:var(--pu)">🧠 Psych Schedule</button>
+        <button class="tab" onclick="setFdTab('census',this)">📋 Patient Census</button>
+      </div>
+      <div id="fd-pane"></div>
+    </div>
+
+    <!-- ALL PATIENTS -->
+    <div id="page-allpats" class="page">
+      <div class="ph">
+        <div><div class="pt">All Patients</div><div class="ps" id="allpats-sub"></div></div>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <input class="inp" id="ap-search" placeholder="Search…" style="max-width:240px" oninput="renderAllPats()">
+        <select class="sel" id="ap-fac" style="width:auto" onchange="renderAllPats()"><option value="">All Facilities</option></select>
+        <div class="tabs">
+          <button class="tab act" onclick="setApFilter('all',this)">All</button>
+          <button class="tab" onclick="setApFilter('long-term',this)">Long-Term</button>
+          <button class="tab" onclick="setApFilter('skilled',this)">Skilled</button>
+          <button class="tab" onclick="setApFilter('new-admission',this)">New Admits</button>
+        </div>
+      </div>
+      <div class="tw"><table><thead><tr><th>Patient</th><th>Facility</th><th>Type</th><th>Admit</th><th>LPN</th><th>Actions</th></tr></thead><tbody id="ap-tbody"></tbody></table></div>
+    </div>
+
+    <!-- ALL VISITS -->
+    <div id="page-allvis" class="page">
+      <div class="ph">
+        <div><div class="pt">All Visits</div><div class="ps" id="allvis-sub"></div></div>
+        <button class="btn bsm" onclick="openAddVisManual()">+ Add Visit</button>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <select class="sel" id="av-fac" style="width:auto" onchange="renderAllVis()"><option value="">All Facilities</option></select>
+        <select class="sel" id="av-ptype" style="width:auto" onchange="renderAllVis()">
+          <option value="">All Providers</option><option value="NP">NP</option><option value="Physician">Physician</option><option value="LPN">LPN</option><option value="Psych">Psych</option>
+        </select>
+        <select class="sel" id="av-status" style="width:auto" onchange="renderAllVis()">
+          <option value="">All Status</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+        </select>
+        <input type="date" id="av-date" style="background:var(--sf);border:1px solid var(--bd);color:var(--tx);padding:5px 10px;border-radius:6px;font-size:13px" onchange="renderAllVis()">
+      </div>
+      <div class="tw"><table><thead><tr><th>Date</th><th>Patient</th><th>Facility</th><th>Visit Type</th><th>Provider</th><th>Status</th><th>Actions</th></tr></thead><tbody id="av-tbody"></tbody></table></div>
+    </div>
+
+    <!-- SCHEDULE RULES -->
+    <div id="page-rules" class="page">
+      <div class="ph">
+        <div><div class="pt">Schedule Rules</div><div class="ps">Define visit generation rules for each provider type</div></div>
+        <button class="btn bp" onclick="openEditRule(null)">+ New Rule</button>
+      </div>
+      <div id="rules-list"></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════ -->
+
+<!-- ADD FACILITY -->
+<div class="ov" id="m-addfac">
+  <div class="modal">
+    <div class="mh"><h3>Add Facility</h3><button class="btn bsm" onclick="closeModal('m-addfac')">✕</button></div>
+    <div class="g12">
+      <div><label class="lbl">Facility Name</label><input class="inp" id="af-name" placeholder="e.g. Four Seasons SNF"></div>
+      <div class="c2">
+        <div><label class="lbl">NP Name</label><input class="inp" id="af-np" placeholder="Provider name"></div>
+        <div><label class="lbl">NP Credential</label><input class="inp" id="af-npc" value="NP" placeholder="NP/APRN"></div>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Physician Name</label><input class="inp" id="af-md" placeholder="Provider name"></div>
+        <div><label class="lbl">Credential</label><input class="inp" id="af-mdc" value="MD" placeholder="MD/DO"></div>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Region / Location</label><input class="inp" id="af-region" placeholder="Optional"></div>
+        <div><label class="lbl">Status</label>
+          <select class="sel" id="af-status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+        </div>
+      </div>
+      <div><label class="lbl">NP Schedule Days (check days NP visits)</label>
+        <div class="row" id="af-np-days" style="flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      </div>
+      <div><label class="lbl">Physician Schedule Days (check days MD visits)</label>
+        <div class="row" id="af-md-days" style="flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      </div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="saveFac()">Save Facility</button>
+        <button class="btn" onclick="closeModal('m-addfac')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT FACILITY -->
+<div class="ov" id="m-editfac">
+  <div class="modal modal-lg">
+    <div class="mh"><h3>Edit Facility</h3><button class="btn bsm" onclick="closeModal('m-editfac')">✕</button></div>
+    <div class="g12">
+      <div><label class="lbl">Facility Name</label><input class="inp" id="ef-name"></div>
+      <div class="c2">
+        <div><label class="lbl">NP Name</label><input class="inp" id="ef-np"></div>
+        <div><label class="lbl">NP Credential</label><input class="inp" id="ef-npc"></div>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Physician Name</label><input class="inp" id="ef-md"></div>
+        <div><label class="lbl">Credential</label><input class="inp" id="ef-mdc"></div>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Region</label><input class="inp" id="ef-region"></div>
+        <div><label class="lbl">Status</label><select class="sel" id="ef-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+      <div><label class="lbl">NP Schedule Days</label><div class="row" id="ef-np-days" style="flex-wrap:wrap;gap:6px;margin-top:4px"></div></div>
+      <div><label class="lbl">Physician Schedule Days</label><div class="row" id="ef-md-days" style="flex-wrap:wrap;gap:6px;margin-top:4px"></div></div>
+      <div><label class="lbl">LPN(s) — comma separated names</label><input class="inp" id="ef-lpns" placeholder="e.g. Jessica Moore, Laura Kim"></div>
+      <div><label class="lbl">Psych Provider(s) — comma separated</label><input class="inp" id="ef-psych" placeholder="e.g. Dr. Thompson"></div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="updateFac()">Save Changes</button>
+        <button class="btn br" onclick="deleteFac()">Delete Facility</button>
+        <button class="btn" onclick="closeModal('m-editfac')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PATIENT -->
+<div class="ov" id="m-addpat">
+  <div class="modal">
+    <div class="mh"><h3>Add Patient</h3><button class="btn bsm" onclick="closeModal('m-addpat')">✕</button></div>
+    <div class="g12">
+      <div class="c2">
+        <div><label class="lbl">Last Name</label><input class="inp" id="np-last"></div>
+        <div><label class="lbl">First Name</label><input class="inp" id="np-first"></div>
+      </div>
+      <div class="c3">
+        <div><label class="lbl">DOB</label><input class="inp" type="date" id="np-dob"></div>
+        <div><label class="lbl">Sex</label><select class="sel" id="np-sex"><option value="M">Male</option><option value="F">Female</option></select></div>
+        <div><label class="lbl">Admit Date</label><input class="inp" type="date" id="np-admit"></div>
+      </div>
+      <div><label class="lbl">Patient Type</label>
+        <select class="sel" id="np-type">
+          <option value="long-term">Long-Term</option>
+          <option value="skilled">Skilled</option>
+          <option value="new-admission">New Admission</option>
+          <option value="assisted-living">Assisted Living</option>
+        </select>
+      </div>
+      <div><label class="lbl">Facility</label><select class="sel" id="np-fac"></select></div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="savePat()">Add Patient</button>
+        <button class="btn" onclick="closeModal('m-addpat')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PATIENT -->
+<div class="ov" id="m-editpat">
+  <div class="modal">
+    <div class="mh"><h3>Edit Patient</h3><button class="btn bsm" onclick="closeModal('m-editpat')">✕</button></div>
+    <div class="g12">
+      <input type="hidden" id="ep-id">
+      <div class="c2">
+        <div><label class="lbl">Last Name</label><input class="inp" id="ep-last"></div>
+        <div><label class="lbl">First Name</label><input class="inp" id="ep-first"></div>
+      </div>
+      <div class="c3">
+        <div><label class="lbl">DOB</label><input class="inp" type="date" id="ep-dob"></div>
+        <div><label class="lbl">Sex</label><select class="sel" id="ep-sex"><option value="M">Male</option><option value="F">Female</option></select></div>
+        <div><label class="lbl">Admit Date</label><input class="inp" type="date" id="ep-admit"></div>
+      </div>
+      <div><label class="lbl">Patient Type</label>
+        <select class="sel" id="ep-type" onchange="showTypeChangeWarning()">
+          <option value="long-term">Long-Term</option>
+          <option value="skilled">Skilled</option>
+          <option value="new-admission">New Admission</option>
+          <option value="assisted-living">Assisted Living</option>
+        </select>
+        <div id="ep-type-warn" style="font-size:11px;color:var(--am);margin-top:4px;display:none">⚠ Changing type will regenerate this patient's schedule only</div>
+      </div>
+      <div><label class="lbl">Facility</label><select class="sel" id="ep-fac"></select></div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="updatePat()">Save Changes</button>
+        <button class="btn br" onclick="deletePat()">Delete Patient</button>
+        <button class="btn" onclick="closeModal('m-editpat')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BULK UPLOAD -->
+<div class="ov" id="m-bulk">
+  <div class="modal modal-lg">
+    <div class="mh"><h3>Bulk Upload Patients</h3><button class="btn bsm" onclick="closeModal('m-bulk')">✕</button></div>
+    <div class="g12">
+      <div class="ibox">
+        <strong>Auto-detects column order from header row.</strong><br>
+        Expected columns: Last Name · First Name · DOB · Type · Sex/Gender · Admit Date<br>
+        Date formats accepted: M/D/YYYY or YYYY-MM-DD<br>
+        Type values: Longterm, Long-Term, LT · Skilled · New Admission, New Admit, New Admissoon
+      </div>
+      <div class="dz" id="bulk-dz" onclick="$i('bulk-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+        📂 Drop CSV or click to browse
+      </div>
+      <input type="file" id="bulk-file" accept=".csv,.txt" style="display:none" onchange="handleFile(event)">
+      <div><label class="lbl">Or paste CSV data:</label><textarea class="txta" id="bulk-txt" placeholder="Last,First,DOB,Type,Sex,AdmitDate&#10;Smith,John,11/9/1971,Longterm,M,8/26/2023"></textarea></div>
+      <div id="bulk-preview" style="display:none">
+        <div class="stit" id="bulk-preview-label"></div>
+        <div style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px">
+          <table><thead><tr><th>Name</th><th>DOB</th><th>Sex</th><th>Admit</th><th>Type (raw)</th><th>→ Mapped</th><th>OK?</th></tr></thead>
+          <tbody id="bulk-preview-body"></tbody></table>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn bsm" onclick="parseBulk()">Preview</button>
+        <button class="btn bp" style="flex:1" onclick="importBulk()">Import Patients</button>
+        <button class="btn" onclick="closeModal('m-bulk')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD VISIT TO DAY -->
+<div class="ov" id="m-addvis">
+  <div class="modal">
+    <div class="mh"><h3 id="addvis-title">Add Visit</h3><button class="btn bsm" onclick="closeModal('m-addvis')">✕</button></div>
+    <div class="g12">
+      <div><label class="lbl">Patient</label>
+        <select class="sel" id="addvis-pat"></select>
+      </div>
+      <div><label class="lbl">Visit Type</label>
+        <select class="sel" id="addvis-type"></select>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Provider</label><input class="inp" id="addvis-prov"></div>
+        <div><label class="lbl">Date</label><input class="inp" type="date" id="addvis-date"></div>
+      </div>
+      <div><label class="lbl">Notes (optional)</label><input class="inp" id="addvis-notes"></div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="saveAddVis()">Save Visit</button>
+        <button class="btn" onclick="closeModal('m-addvis')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT/ADD RULE -->
+<div class="ov" id="m-rule">
+  <div class="modal modal-lg">
+    <div class="mh"><h3 id="rule-title">Schedule Rule</h3><button class="btn bsm" onclick="closeModal('m-rule')">✕</button></div>
+    <div class="g12">
+      <input type="hidden" id="rule-id">
+      <div><label class="lbl">Rule Name</label><input class="inp" id="rule-name" placeholder="e.g. Monthly Long-Term Comprehensive"></div>
+      <div class="c2">
+        <div><label class="lbl">Provider Type</label>
+          <select class="sel" id="rule-prov">
+            <option value="NP">Nurse Practitioner (NP)</option>
+            <option value="Physician">Physician (MD/DO)</option>
+            <option value="LPN">LPN</option>
+            <option value="Psych">Psych Provider</option>
+          </select>
+        </div>
+        <div><label class="lbl">Applies To</label>
+          <select class="sel" id="rule-applies" onchange="showCustomTypeField()">
+            <option value="long-term">Long-Term Only</option>
+            <option value="skilled">Skilled Only</option>
+            <option value="new-admission">New Admissions Only</option>
+            <option value="assisted-living">Assisted Living Only</option>
+            <option value="long-term,new-admission">Long-Term + New Admits</option>
+            <option value="skilled,new-admission">Skilled + New Admits</option>
+            <option value="long-term,assisted-living">Long-Term + Assisted Living</option>
+            <option value="all">All Patients</option>
+            <option value="custom">Custom Type…</option>
+          </select>
+          <div id="rule-custom-type-row" style="display:none;margin-top:6px">
+            <input class="inp" id="rule-custom-type" placeholder="Type name e.g. memory-care, respite, hospice">
+            <div style="font-size:11px;color:var(--mu);margin-top:3px">Use lowercase with hyphens. This type will also appear in patient type dropdowns.</div>
+          </div>
+        </div>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Frequency</label>
+          <select class="sel" id="rule-freq" onchange="renderRuleFreqUI()">
+            <option value="monthly">Monthly (once per month)</option>
+            <option value="semi-monthly">Semi-Monthly / Follow-Up (optional)</option>
+            <option value="skilled-3x">Skilled 3×/Week (NP+MD combined ≤3)</option>
+            <option value="every-60">Every 60 Days (Physician rotation)</option>
+            <option value="annual">Annual Wellness</option>
+            <option value="semi-annual">Semi-Annual Wellness</option>
+            <option value="new-admit">New Admission (within 3 days)</option>
+            <option value="weekly">Weekly</option>
+            <option value="quarterly">Quarterly (every 90 days)</option>
+            <option value="custom-days">Every N Days</option>
+          </select>
+        </div>
+        <div><label class="lbl">Sex Filter</label>
+          <select class="sel" id="rule-sex"><option value="all">All</option><option value="M">Male Only</option><option value="F">Female Only</option></select>
+        </div>
+      </div>
+      <div id="rule-freq-extra"></div>
+      <div><label class="lbl">Description (shown on visit chip)</label>
+        <input class="inp" id="rule-desc" placeholder="Short description…">
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Months to generate ahead</label><input class="inp" type="number" id="rule-months" value="3" min="1" max="24"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding-top:20px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="rule-active" checked style="width:15px;height:15px">Active
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="rule-optional">Optional / Flexible
+          </label>
+        </div>
+      </div>
+      <div id="rule-err" style="color:var(--re);font-size:12px;display:none"></div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="saveRule()">Save Rule</button>
+        <button class="btn br" id="rule-del-btn" onclick="deleteRule()" style="display:none">Delete</button>
+        <button class="btn" onclick="closeModal('m-rule')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD VISIT MANUAL (all visits page) -->
+<div class="ov" id="m-manvis">
+  <div class="modal">
+    <div class="mh"><h3>Add Visit</h3><button class="btn bsm" onclick="closeModal('m-manvis')">✕</button></div>
+    <div class="g12">
+      <div><label class="lbl">Patient</label><select class="sel" id="mv-pat" onchange="mvFill()"></select></div>
+      <div><label class="lbl">Visit Type</label><input class="inp" id="mv-type" placeholder="e.g. Long-Term Comprehensive"></div>
+      <div class="c2">
+        <div><label class="lbl">Provider</label><input class="inp" id="mv-prov"></div>
+        <div><label class="lbl">Provider Type</label>
+          <select class="sel" id="mv-pt"><option value="NP">NP</option><option value="Physician">Physician</option><option value="LPN">LPN</option><option value="Psych">Psych</option></select>
+        </div>
+      </div>
+      <div class="c2">
+        <div><label class="lbl">Date</label><input class="inp" type="date" id="mv-date"></div>
+        <div><label class="lbl">Status</label><select class="sel" id="mv-status"><option value="scheduled">Scheduled</option><option value="completed">Completed</option></select></div>
+      </div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="saveManVis()">Save</button>
+        <button class="btn" onclick="closeModal('m-manvis')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APPLY RULES CONFIRM -->
+<div class="ov" id="m-apply">
+  <div class="modal">
+    <div class="mh"><h3>⚡ Apply Schedule Rules</h3><button class="btn bsm" onclick="closeModal('m-apply')">✕</button></div>
+    <div class="g12">
+      <div id="apply-preview" class="ibox"></div>
+      <div class="wbox">This will clear all future scheduled visits for this facility and regenerate from rules. Completed visits are kept.</div>
+      <div class="row">
+        <button class="btn bp" style="flex:1" onclick="confirmApply()">Generate Schedule</button>
+        <button class="btn" onclick="closeModal('m-apply')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ════════════════════════════════════════════════════════════════
+const SUPABASE_URL='https://uaikarqkdgeuxiitghua.supabase.co';
+const SUPABASE_KEY='sb_publishable_2S-_uo9ton9wjLls8d0eaw_BYh28lrz';
+
+// ════════════════════════════════════════════════════════════════
+// SUPABASE — robust CRUD with error logging
+// Table structure: {id: uuid, data: jsonb}
+// ════════════════════════════════════════════════════════════════
+const SB_HEADERS={
+  apikey:SUPABASE_KEY,
+  Authorization:'Bearer '+SUPABASE_KEY,
+  'Content-Type':'application/json'
+};
+
+function setDbStatus(ok,msg){
+  const dot=$i('db-status-dot');
+  const txt=$i('db-status-txt');
+  if(dot) dot.style.background=ok?'var(--gr)':'var(--re)';
+  if(txt) txt.textContent=msg||'';
+}
+
+async function sbGet(t){
+  // Supabase caps at 1000 rows per request — paginate using offset
+  try{
+    let allRows=[];
+    let offset=0;
+    const PAGE=1000;
+    while(true){
+      const url=`${SUPABASE_URL}/rest/v1/${t}?select=*&order=id.asc&limit=${PAGE}&offset=${offset}`;
+      const r=await fetch(url,{
+        headers:{
+          apikey:SUPABASE_KEY,
+          Authorization:'Bearer '+SUPABASE_KEY,
+          'Prefer':'count=none'
+        }
+      });
+      if(!r.ok){
+        const txt=await r.text();
+        console.warn('sbGet fail',t,r.status,txt);
+        break;
+      }
+      const rows=await r.json();
+      if(!Array.isArray(rows)||rows.length===0) break;
+      allRows=allRows.concat(rows);
+      console.log(`sbGet ${t}: fetched ${rows.length} rows at offset ${offset}, total so far: ${allRows.length}`);
+      if(rows.length<PAGE) break;
+      offset+=PAGE;
+    }
+    return allRows;
+  }catch(e){
+    console.error('sbGet error',t,e);
+    return[];
+  }
+}
+
+async function sbIns(t,d){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}`,
+      {method:'POST',headers:{...SB_HEADERS,Prefer:'return=representation'},body:JSON.stringify(d)});
+    if(!r.ok){
+      const txt=await r.text();
+      console.warn('sbIns fail',t,r.status,txt);
+      setDbStatus(false,'Save failed: '+r.status+' '+txt.substring(0,60));
+      return null;
+    }
+    const j=await r.json();
+    return Array.isArray(j)?j[0]:j;
+  }catch(e){
+    console.error('sbIns error',t,e);
+    setDbStatus(false,'Save error: '+e.message);
+    return null;
+  }
+}
+
+async function sbUpd(t,rowId,d){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?id=eq.${rowId}`,
+      {method:'PATCH',headers:SB_HEADERS,body:JSON.stringify(d)});
+    if(!r.ok){
+      const txt=await r.text();
+      console.warn('sbUpd fail',t,rowId,r.status,txt);
+      setDbStatus(false,'Update failed: '+r.status);
+    }
+  }catch(e){
+    console.error('sbUpd error',t,e);
+    setDbStatus(false,'Update error: '+e.message);
+  }
+}
+
+async function sbDel(t,rowId){
+  if(!rowId||rowId==='undefined'){console.warn('sbDel called with invalid rowId',t,rowId);return;}
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?id=eq.${rowId}`,
+      {method:'DELETE',headers:SB_HEADERS});
+    if(!r.ok){
+      const txt=await r.text();
+      console.warn('sbDel fail',t,rowId,r.status,txt);
+      setDbStatus(false,'Delete failed: '+r.status);
+    }
+  }catch(e){
+    console.error('sbDel error',t,e);
+    setDbStatus(false,'Delete error: '+e.message);
+  }
+}
+
+// Delete all rows for a facility in a table where data->>'fid' matches
+async function sbDelFacVisits(fid){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/visits?data->>fid=eq.${fid}`,
+      {method:'DELETE',headers:SB_HEADERS});
+    if(!r.ok){const txt=await r.text();console.warn('sbDelFacVisits fail',fid,r.status,txt);}
+  }catch(e){console.error('sbDelFacVisits error',e);}
+}
+
+// Upsert a single visit (smart: update if exists, insert if not)
+async function syncVis(v){
+  if(_sbVisMap[v.id]){
+    await sbUpd('visits',_sbVisMap[v.id],{data:v});
+  } else {
+    const row=await sbIns('visits',{data:v});
+    if(row)_sbVisMap[v.id]=row.id;
+  }
+}
+
+// Upsert a single patient
+async function syncPat(p){
+  if(_sbPatMap[p.id]){
+    await sbUpd('patients',_sbPatMap[p.id],{data:p});
+  } else {
+    const row=await sbIns('patients',{data:p});
+    if(row)_sbPatMap[p.id]=row.id;
+  }
+}
+
+// Upsert a facility
+async function syncFac(f){
+  if(_sbFacMap[f.id]){
+    await sbUpd('facilities',_sbFacMap[f.id],{data:f});
+  } else {
+    const row=await sbIns('facilities',{data:f});
+    if(row)_sbFacMap[f.id]=row.id;
+  }
+}
+
+// Delete a visit from DB
+async function delVisFromDB(vid){
+  if(_sbVisMap[vid]){
+    await sbDel('visits',_sbVisMap[vid]);
+    delete _sbVisMap[vid];
+  }
+}
+
+// Persist nid counter — app_state has columns: key text PK, value jsonb
+async function saveNid(){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/app_state`,{
+      method:'POST',
+      headers:{...SB_HEADERS,Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({key:'nid',value:nid})
+    });
+  }catch(e){console.warn('saveNid:',e);}
+}
+
+async function syncFacilityVisits(fid){
+  fid=+fid;
+  showLoader('Saving schedule to database…');
+  try{
+    // Delete old visits via RPC
+    const delResp=await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_facility_visits`,{
+      method:'POST',headers:SB_HEADERS,body:JSON.stringify({p_fid:fid})
+    });
+    if(!delResp.ok) console.warn('RPC delete status:',delResp.status,await delResp.text());
+
+    // Clear local map
+    visits.filter(v=>+v.fid===fid).forEach(v=>delete _sbVisMap[v.id]);
+
+    const facVisits=visits.filter(v=>+v.fid===fid);
+    if(!facVisits.length){await saveNid();hideLoader();setDbStatus(true,'✓ Saved');return true;}
+
+    // Insert in chunks of 50 with up to 3 retries per chunk
+    const CHUNK=50;
+    let totalInserted=0,failed=0;
+    for(let i=0;i<facVisits.length;i+=CHUNK){
+      const chunk=facVisits.slice(i,i+CHUNK);
+      showLoader(`Saving ${Math.min(i+CHUNK,facVisits.length)} of ${facVisits.length} visits…`);
+      let ok=false;
+      for(let attempt=0;attempt<3&&!ok;attempt++){
+        try{
+          const r=await fetch(`${SUPABASE_URL}/rest/v1/visits`,{
+            method:'POST',
+            headers:{...SB_HEADERS,Prefer:'return=representation'},
+            body:JSON.stringify(chunk.map(v=>({data:v})))
+          });
+          if(r.ok){
+            const ins=await r.json();
+            if(Array.isArray(ins)){
+              ins.forEach((row,idx)=>{if(chunk[idx]&&row?.id)_sbVisMap[chunk[idx].id]=row.id;});
+              totalInserted+=ins.length;
+            }
+            ok=true;
+          } else {
+            const err=await r.text();
+            console.warn(`Chunk ${i} attempt ${attempt+1} failed:`,r.status,err);
+            await new Promise(res=>setTimeout(res,800));
+          }
+        }catch(e){await new Promise(res=>setTimeout(res,800));}
+      }
+      if(!ok){failed+=chunk.length;console.error(`Chunk ${i} failed after 3 attempts`);}
+    }
+    await saveNid();
+    hideLoader();
+    if(failed>0){
+      setDbStatus(false,`⚠ ${failed}/${facVisits.length} visits failed`);
+      alert(`⚠ Only ${totalInserted} of ${facVisits.length} visits saved.\n\nSome chunks failed. Try Apply Rules again.`);
+      return false;
+    }
+    setDbStatus(true,`✓ ${totalInserted} visits saved`);
+    toast(`✓ ${totalInserted} visits saved to database`);
+    return true;
+  }catch(e){
+    hideLoader();
+    console.error('syncFacilityVisits:',e);
+    setDbStatus(false,'Save error: '+e.message);
+    toast('⚠ Save error: '+e.message);
+    return false;
+  }
+}
+
+// Batch save patients for a facility
+async function syncFacilityPatients(fid){
+  const facPats=patients.filter(p=>+p.fid===+fid);
+  if(!facPats.length) return;
+  for(const p of facPats){
+    if(_sbPatMap[p.id]){
+      await sbUpd('patients',_sbPatMap[p.id],{data:p});
+    } else {
+      const row=await sbIns('patients',{data:p});
+      if(row) _sbPatMap[p.id]=row.id;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+const $i=id=>document.getElementById(id);
+let facilities=[], patients=[], visits=[], rules=[];
+let nid=10000;
+let curFid=null, curFdTab='np';
+let apFilter='all', _bfid=null;
+let _sbFacMap={}, _sbPatMap={}, _sbVisMap={}, _sbRuleMap={};
+let _localOp=false; // suppress RT echo during our own writes
+
+// ════════════════════════════════════════════════════════════════
+// DEFAULT SCHEDULE RULES
+// ════════════════════════════════════════════════════════════════
+const DEFAULT_RULES=[
+  // NP Rules
+  {id:'r1',name:'Long-Term Comprehensive',provType:'NP',applies:'long-term,new-admission',sex:'all',freq:'monthly',months:6,optional:false,active:true,desc:'Monthly visit — entire LT census seen once/month spread across NP days'},
+  {id:'r2',name:'Monthly Follow-Up',provType:'NP',applies:'long-term,new-admission',sex:'all',freq:'semi-monthly',months:6,optional:true,active:true,desc:'Optional 2nd visit/month — smoker screen, alcohol screen, diabetic, pain follow-up'},
+  {id:'r3',name:'Skilled Visit',provType:'NP',applies:'skilled,new-admission',sex:'all',freq:'skilled-3x',months:2,optional:false,active:true,desc:'Up to 3×/week — combined NP+Physician cannot exceed 3/week/patient'},
+  {id:'r4',name:'Annual Wellness Visit',provType:'NP',applies:'all',sex:'all',freq:'annual',months:24,optional:false,active:true,desc:'Once per year — 1 day after admit anniversary'},
+  {id:'r5',name:'Female Wellness Visit',provType:'NP',applies:'long-term,new-admission',sex:'F',freq:'semi-annual',months:24,optional:false,active:true,desc:'Semi-annual wellness for female patients'},
+  {id:'r6',name:'Male Wellness Visit',provType:'NP',applies:'long-term,new-admission',sex:'M',freq:'semi-annual',months:24,optional:false,active:true,desc:'Semi-annual wellness for male patients'},
+  // Physician Rules
+  {id:'r7',name:'Physician 60-Day',provType:'Physician',applies:'long-term',sex:'all',freq:'every-60',months:12,optional:false,active:true,desc:'Every 60 days — LT census split evenly across physician scheduled days'},
+  {id:'r8',name:'Physician New Admission',provType:'Physician',applies:'new-admission',sex:'all',freq:'new-admit',months:1,optional:false,active:true,desc:'Seen within 3 days of admission'},
+  {id:'r9',name:'Physician Skilled Visit',provType:'Physician',applies:'skilled,new-admission',sex:'all',freq:'skilled-3x',months:2,optional:false,active:true,desc:'Skilled patients — combined with NP cannot exceed 3×/week'},
+  // LPN Rules
+  {id:'r10',name:'LPN Daily Standard',provType:'LPN',applies:'all',sex:'all',freq:'monthly',months:3,optional:false,active:true,desc:'Daily standard visit — entire caseload seen every LPN day'},
+  {id:'r11',name:'Chronic Care Management',provType:'LPN',applies:'long-term,new-admission',sex:'all',freq:'custom-days',freqN:30,months:6,optional:false,active:true,desc:'CCM — every 30 days'},
+  {id:'r12',name:'PHQ-9 Assessment',provType:'LPN',applies:'long-term,new-admission',sex:'all',freq:'quarterly',months:12,optional:false,active:true,desc:'PHQ-9 depression screen — every 90 days'},
+  // Counseling / Preventive Rules (tracked on dashboard)
+  {id:'r13',name:'Smoking Cessation Counseling',provType:'NP',applies:'all',sex:'all',freq:'custom-days',freqN:46,months:12,optional:true,active:true,desc:'8x per year — tobacco cessation counseling (approx every 46 days)'},
+  {id:'r14',name:'Alcohol Use Counseling',provType:'NP',applies:'all',sex:'all',freq:'custom-days',freqN:61,months:12,optional:true,active:true,desc:'6x per year — alcohol screening & brief counseling (approx every 61 days)'},
+  {id:'r15',name:'Advance Care Planning',provType:'NP',applies:'long-term,new-admission',sex:'all',freq:'annual',months:24,optional:true,active:true,desc:'Annual advance care planning discussion — can be added to any visit'},
+];
+
+// ════════════════════════════════════════════════════════════════
+// PASSWORD
+// ════════════════════════════════════════════════════════════════
+function checkPW(){
+  if($i('pw-in').value==='AMA1234!'){
+    $i('pw-gate').style.display='none';
+    sessionStorage.setItem('snf_auth','1');
+    bootstrap();
+  } else {
+    $i('pw-err').textContent='Incorrect password.';
+    $i('pw-in').value='';$i('pw-in').focus();
+    const b=$i('pw-box');b.style.animation='none';
+    setTimeout(()=>b.style.animation='shake .4s ease',10);
+  }
+}
+$i('pw-in').addEventListener('keydown',e=>{if(e.key==='Enter')checkPW();});
+if(sessionStorage.getItem('snf_auth')==='1'){
+  $i('pw-gate').style.display='none';
+  document.addEventListener('DOMContentLoaded',bootstrap);
+}
+
+// ════════════════════════════════════════════════════════════════
+// BOOTSTRAP
+// ════════════════════════════════════════════════════════════════
+async function bootstrap(){
+  showLoader('Connecting…');
+  try{
+    const [facRows,patRows,visRows,ruleRows]=await Promise.all([
+      sbGet('facilities'),sbGet('patients'),sbGet('visits'),sbGet('rules')
+    ]);
+
+    // Load facilities
+    facilities=facRows.map(r=>({...r.data,
+      npDays:r.data.npDays||[],mdDays:r.data.mdDays||[],
+      lpns:r.data.lpns||[],psychProviders:r.data.psychProviders||[]
+    }));
+    facRows.forEach(r=>_sbFacMap[+r.data.id]=r.id);
+
+    // Load patients — normalize all IDs to numbers
+    patients=patRows.map(r=>({...r.data,id:+r.data.id,fid:+r.data.fid}));
+    patRows.forEach(r=>_sbPatMap[+r.data.id]=r.id);
+
+    // Load visits — deduplicate on load (keep latest Supabase row per logical visit id)
+    const patIdSet=new Set(patients.map(p=>p.id));
+    const visMap={};
+    visRows.forEach(r=>{
+      if(!r.data||!r.data.id) return;
+      const vid=+r.data.id;
+      // Skip orphaned visits for deleted patients
+      if(r.data.pid&&!patIdSet.has(+r.data.pid)) return;
+      if(!visMap[vid]||r.id>visMap[vid].sbId){
+        visMap[vid]={data:r.data,sbId:r.id};
+      }
+    });
+    visits=Object.values(visMap).map(x=>({...x.data,id:+x.data.id,fid:+x.data.fid,pid:+x.data.pid}));
+    Object.values(visMap).forEach(x=>{_sbVisMap[+x.data.id]=x.sbId;});
+
+    // Load rules — deduplicate (keep latest row per rule id, clean up old duplicates)
+    if(ruleRows.length){
+      const ruleMap={};
+      const dupRowIds=[];
+      ruleRows.forEach(r=>{
+        if(!r.data||!r.data.id) return;
+        const rid=r.data.id;
+        if(ruleMap[rid]){
+          if(r.id>ruleMap[rid].sbId){
+            dupRowIds.push(ruleMap[rid].sbId);
+            ruleMap[rid]={data:r.data,sbId:r.id};
+          } else {
+            dupRowIds.push(r.id);
+          }
+        } else {
+          ruleMap[rid]={data:r.data,sbId:r.id};
+        }
+      });
+      rules=Object.values(ruleMap).map(x=>x.data);
+      Object.entries(ruleMap).forEach(([rid,x])=>{_sbRuleMap[rid]=x.sbId;});
+      // Delete duplicate rows in background
+      if(dupRowIds.length){
+        console.log('Cleaning',dupRowIds.length,'duplicate rule rows');
+        dupRowIds.forEach(sbId=>sbDel('rules',sbId));
+      }
+    } else {
+      // First run — save all defaults
+      rules=DEFAULT_RULES.map(r=>({...r}));
+      for(const r of rules){
+        const row=await sbIns('rules',{data:r});
+        if(row) _sbRuleMap[r.id]=row.id;
+      }
+    }
+
+
+    // Load nid counter — app_state has key/value columns (not data jsonb)
+    try{
+      const stateResp=await fetch(`${SUPABASE_URL}/rest/v1/app_state?key=eq.nid&select=value`,
+        {headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY}});
+      if(stateResp.ok){
+        const stateRows=await stateResp.json();
+        const dbNid=stateRows[0]?.value?+stateRows[0].value:0;
+        const allIds=[...patients.map(p=>p.id),...visits.map(v=>v.id)];
+        nid=Math.max(10000,dbNid,...allIds)+1;
+      }
+    }catch(e){
+      const allIds=[...patients.map(p=>p.id),...visits.map(v=>v.id)];
+      nid=Math.max(10000,...allIds)+1;
+    }
+
+    hideLoader();
+    setDbStatus(true,'Connected ✓');
+    toast('✓ Connected');
+    loadCustomTypes();
+    renderAll();
+  }catch(err){
+    hideLoader();
+    console.error('Bootstrap error:',err);
+    rules=DEFAULT_RULES.map(r=>({...r}));
+    setDbStatus(false,'DB connection failed — offline mode');
+    toast('⚠ Running offline — changes will not persist');
+    renderAll();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// SYNC — safe write-then-sync pattern
+// ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// DATE UTILITIES
+// ════════════════════════════════════════════════════════════════
+const todayStr=()=>new Date().toISOString().split('T')[0];
+function addDays(d,n){const dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0];}
+function addMonths(d,n){const dt=new Date(d+'T12:00:00');dt.setMonth(dt.getMonth()+n);return dt.toISOString().split('T')[0];}
+function dayOfWeek(d){return new Date(d+'T12:00:00').getDay();} // 0=Sun
+function weekNum(d){const dt=new Date(d+'T12:00:00');const jan1=new Date(dt.getFullYear(),0,1);return Math.ceil(((dt-jan1)/86400000+jan1.getDay()+1)/7);}
+function isoWeek(d){// returns YYYY-Www
+  const dt=new Date(d+'T12:00:00');
+  const y=dt.getFullYear(),m=dt.getMonth(),day=dt.getDate();
+  const dow=dt.getDay()||7;
+  dt.setDate(day+4-dow);
+  const jan1=new Date(dt.getFullYear(),0,1);
+  return `${dt.getFullYear()}-W${String(Math.ceil(((dt-jan1)/86400000+1)/7)).padStart(2,'0')}`;
+}
+function monthKey(d){return d.substring(0,7);}
+function daysInMonth(ym){const[y,m]=ym.split('-').map(Number);return new Date(y,m,0).getDate();}
+function allDaysInMonth(ym){
+  const[y,m]=ym.split('-').map(Number);
+  const days=[];
+  for(let d=1;d<=new Date(y,m,0).getDate();d++){
+    days.push(`${ym}-${String(d).padStart(2,'0')}`);
+  }
+  return days;
+}
+function nextMonth(ym){return monthKey(addMonths(ym+'-01',1));}
+function mLabel(ym){return new Date(ym+'-15T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'});}
+function dLabel(d){return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}
+const DOW_LABELS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ════════════════════════════════════════════════════════════════
+// FACILITY SCHEDULE DAYS  
+// npDays / mdDays are arrays of day-of-week numbers [0-6]
+// ════════════════════════════════════════════════════════════════
+function getFacDays(fac,role){
+  return Array.isArray(role==='np'?fac.npDays:fac.mdDays)?(role==='np'?fac.npDays:fac.mdDays):[];
+}
+function getScheduledDaysInMonth(fac,role,ym){
+  const dows=getFacDays(fac,role);
+  if(!dows.length) return [];
+  return allDaysInMonth(ym).filter(d=>dows.includes(dayOfWeek(d)));
+}
+
+// ════════════════════════════════════════════════════════════════
+// SCHEDULE RULES ENGINE — clean rewrite
+// Rules generate visits ONLY on provider's actual scheduled days
+// ════════════════════════════════════════════════════════════════
+
+// Does this rule apply to this patient?
+function patientMatchesRule(r,p){
+  if(!r.active) return false;
+  if(r.sex!=='all'&&r.sex!==p.sex) return false;
+  const applies=(r.applies||'all').trim().toLowerCase();
+  if(applies==='all') return true;
+
+  // Normalize applies string to array of types
+  const typeAliases={
+    'new admission':'new-admission',
+    'newadmission':'new-admission',
+    'new admit':'new-admission',
+    'longterm':'long-term',
+    'long term':'long-term',
+  };
+  const parts=applies.split(',').map(s=>{
+    const t=s.trim();
+    return typeAliases[t]||t;
+  });
+
+  // Direct match
+  if(parts.includes(p.type)) return true;
+
+  // For skilled-3x rules: if applies includes 'skilled', also match new-admission
+  // (new admits follow skilled protocols)
+  if(r.freq==='skilled-3x'&&parts.includes('skilled')&&p.type==='new-admission') return true;
+
+  return false;
+}
+
+// Get all days a provider is scheduled in a given month
+function getMDDays(fac,ym){return getScheduledDaysInMonth(fac,'md',ym);}
+function getNPDays(fac,ym){return getScheduledDaysInMonth(fac,'np',ym);}
+
+// Get the nearest provider day on or after a target date (within maxDays window)
+function nearestDay(targetDate,fac,role,maxDays=30){
+  for(let i=0;i<=maxDays;i++){
+    const d=addDays(targetDate,i);
+    const dows=getFacDays(fac,role);
+    if(dows.includes(dayOfWeek(d))) return d;
+  }
+  // Fallback: return target date even if not a set day
+  return targetDate;
+}
+
+// Generate visits for ONE patient — uses actual provider scheduled days
+function genVisitsForPatient(p,fac){
+  const today=todayStr();
+  const matchRules=rules.filter(r=>patientMatchesRule(r,p));
+  matchRules.forEach(rule=>{
+    try{ genVisitsForRule(rule,p,fac,today); }
+    catch(e){ console.warn('Rule error',rule.id,rule.name,e.message); }
+  });
+}
+
+function pushVisit(obj){
+  visits.push({id:++nid,...obj});
+}
+
+function genVisitsForRule(rule,p,fac,today){
+  const pt=rule.provType;
+  const months=+(rule.months||3);
+  const admit=p.admit||today;
+
+  // Resolve provider name
+  let prov='';
+  if(pt==='NP') prov=fac.np||'';
+  else if(pt==='Physician') prov=fac.md||'';
+  else if(pt==='LPN'){
+    const lpns=fac.lpns||[];
+    const asgn=p.lpnId?lpns.find(l=>l.id===p.lpnId):null;
+    prov=asgn?asgn.name:(lpns[0]?lpns[0].name:'LPN');
+  }
+  else if(pt==='Psych'){
+    const pp=fac.psychProviders||[];
+    prov=pp[0]?pp[0].name:'Psych';
+  }
+
+  // ── MONTHLY: one visit per month on provider's first set day ───────────
+  if(rule.freq==='monthly'){
+    for(let m=0;m<months;m++){
+      const ym=monthKey(addMonths(today,m));
+      const days=pt==='NP'?getNPDays(fac,ym):pt==='Physician'?getMDDays(fac,ym):
+        allDaysInMonth(ym).filter(d=>{const w=dayOfWeek(d);return w>=1&&w<=5;});
+      if(!days.length) continue;
+      pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:pt,
+        date:days[0],status:'scheduled',optional:!!rule.optional,ruleId:rule.id});
+    }
+  }
+
+  // ── SEMI-MONTHLY: optional 2nd visit per month, mid-month NP day ───────
+  else if(rule.freq==='semi-monthly'){
+    for(let m=0;m<months;m++){
+      const ym=monthKey(addMonths(today,m));
+      const days=getNPDays(fac,ym);
+      if(!days.length) continue;
+      const mid=days[Math.floor(days.length/2)]||days[0];
+      pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:'NP',
+        date:mid,status:'scheduled',optional:true,ruleId:rule.id});
+    }
+  }
+
+  // ── SKILLED 3x/WEEK: only on provider's actual set days ─────────────────
+  else if(rule.freq==='skilled-3x'){
+    const role=pt==='NP'?'np':'md';
+    const weeks=Math.min(months*4,8);
+    for(let w=0;w<weeks;w++){
+      const ws=addDays(today,w*7);
+      const we=addDays(today,w*7+6);
+      const ym1=monthKey(ws), ym2=monthKey(we);
+      let pdays=getScheduledDaysInMonth(fac,role,ym1);
+      if(ym2!==ym1) pdays=[...pdays,...getScheduledDaysInMonth(fac,role,ym2)];
+      let weekDays=pdays.filter(d=>d>=ws&&d<=we&&d>=today);
+      // If no set days, fall back to Mon/Wed/Fri for NP, Tue/Thu for MD
+      if(!weekDays.length){
+        const fallbackDows=role==='np'?[1,3,5]:[2,4];
+        for(let d=0;d<7;d++){
+          const date=addDays(ws,d);
+          if(date>=today&&date<=we&&fallbackDows.includes(dayOfWeek(date))) weekDays.push(date);
+        }
+      }
+      // Up to 3 visits this week
+      weekDays.slice(0,3).forEach(d=>{
+        pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:pt,
+          date:d,status:'scheduled',optional:false,ruleId:rule.id,skilled:true});
+      });
+    }
+  }
+
+  // ── EVERY 60 DAYS: physician rotation, snapped to MD set days ──────────
+  else if(rule.freq==='every-60'){
+    const cycles=Math.ceil(months*30/60);
+    // Stagger across 55 days so patients spread across MD schedule
+    const ltPats=patients.filter(x=>String(x.fid)===String(fac.id)&&x.type==='long-term');
+    const idx=Math.max(0,ltPats.findIndex(x=>x.id===p.id));
+    const stagger=ltPats.length>1?Math.round((idx/ltPats.length)*55):0;
+    for(let c=0;c<cycles;c++){
+      const target=addDays(today,stagger+c*60);
+      // Snap to nearest MD scheduled day
+      const snapDate=nearestDay(target,fac,'md',21);
+      pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov:fac.md||'',provType:'Physician',
+        date:snapDate,status:'scheduled',optional:false,ruleId:rule.id});
+    }
+  }
+
+  // ── ANNUAL WELLNESS: 1yr+1day from admit or last done ──────────────────
+  else if(rule.freq==='annual'){
+    const lastDone=visits.filter(v=>v.pid===p.id&&v.type===rule.name&&v.status==='completed')
+      .sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const anchor=lastDone?lastDone.date:admit;
+    for(let i=1;i<=Math.max(2,Math.ceil(months/12));i++){
+      const target=addDays(addMonths(anchor,i*12),1);
+      if(target>=today){
+        const snapDate=nearestDay(target,fac,'np',30);
+        pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov:fac.np||'',provType:'NP',
+          date:snapDate,status:'scheduled',optional:false,ruleId:rule.id});
+      }
+    }
+  }
+
+  // ── SEMI-ANNUAL WELLNESS ────────────────────────────────────────────────
+  else if(rule.freq==='semi-annual'){
+    const lastDone=visits.filter(v=>v.pid===p.id&&v.type===rule.name&&v.status==='completed')
+      .sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const anchor=lastDone?lastDone.date:admit;
+    for(let i=1;i<=Math.max(2,Math.ceil(months/6));i++){
+      const target=addMonths(anchor,i*6);
+      if(target>=today){
+        const snapDate=nearestDay(target,fac,'np',30);
+        pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov:fac.np||'',provType:'NP',
+          date:snapDate,status:'scheduled',optional:false,ruleId:rule.id});
+      }
+    }
+  }
+
+  // ── NEW ADMISSION: nearest provider day on/after admit ─────────────────
+  else if(rule.freq==='new-admit'){
+    const role=pt==='Physician'?'md':'np';
+    // If admit is in the past, schedule on next upcoming provider day
+    // If admit is recent (within 7 days), schedule on nearest provider day from admit
+    const anchor=admit>=today?admit:addDays(today,0);
+    const snapDate=nearestDay(anchor,fac,role,14);
+    if(snapDate>=today){
+      pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:pt,
+        date:snapDate,status:'scheduled',optional:false,ruleId:rule.id});
+    }
+  }
+
+  // ── WEEKLY ──────────────────────────────────────────────────────────────
+  else if(rule.freq==='weekly'){
+    const role=pt==='NP'?'np':pt==='Physician'?'md':null;
+    for(let m=0;m<months;m++){
+      const ym=monthKey(addMonths(today,m));
+      const days=role?getScheduledDaysInMonth(fac,role,ym):
+        allDaysInMonth(ym).filter(d=>{const w=dayOfWeek(d);return w>=1&&w<=5;});
+      // One per week: pick first day of each ISO week
+      const byWeek={};
+      days.forEach(d=>{const wk=isoWeek(d);if(!byWeek[wk])byWeek[wk]=d;});
+      Object.values(byWeek).forEach(d=>{
+        if(d>=today) pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:pt,
+          date:d,status:'scheduled',optional:!!rule.optional,ruleId:rule.id});
+      });
+    }
+  }
+
+  // ── QUARTERLY (every 90 days) ────────────────────────────────────────────
+  else if(rule.freq==='quarterly'){
+    const cycles=Math.ceil(months/3);
+    for(let i=0;i<cycles;i++){
+      const target=addDays(today,i*90);
+      if(target>=today) pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:pt,
+        date:target,status:'scheduled',optional:false,ruleId:rule.id});
+    }
+  }
+
+  // ── CUSTOM DAYS (every N days) ───────────────────────────────────────────
+  else if(rule.freq==='custom-days'){
+    const n=+(rule.freqN||30);
+    const cycles=Math.ceil(months*30/n);
+    for(let i=0;i<cycles;i++){
+      const target=addDays(today,i*n);
+      if(target>=today) pushVisit({pid:p.id,fid:fac.id,type:rule.name,prov,provType:pt,
+        date:target,status:'scheduled',optional:!!rule.optional,ruleId:rule.id});
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// REDISTRIBUTION — spread visits evenly across provider days
+// Hard cap: NP=30/day, MD=25/day, LPN=30/day
+// ════════════════════════════════════════════════════════════════
+const NP_CAP=30, MD_CAP=25, LPN_CAP=30;
+
+function redistributeProvider(fid,provType,ym,days,cap){
+  if(!days||!days.length) return;
+  // Get non-skilled visits for this provider/month — skilled visits already on correct days
+  const toMove=visits.filter(v=>
+    +v.fid===+fid&&v.provType===provType&&
+    v.status==='scheduled'&&monthKey(v.date)===ym&&!v.skilled
+  );
+  if(!toMove.length) return;
+  // Priority order for scheduling
+  const rank={'Long-Term Comprehensive':0,'Physician 60-Day':0,'LPN Daily Standard':0,
+    'Monthly Follow-Up':1,'Chronic Care Management':1,
+    'Annual Wellness Visit':2,'Female Wellness Visit':2,'Male Wellness Visit':2,
+    'Advance Care Planning':3,'PHQ-9 Assessment':3,'Smoking Cessation Counseling':4,'Alcohol Use Counseling':4};
+  toMove.sort((a,b)=>(rank[a.type]??5)-(rank[b.type]??5)||a.pid-b.pid);
+  // Count load on each set day (from skilled visits already placed)
+  const movedIds=new Set(toMove.map(v=>v.id));
+  const slots={};
+  days.forEach(d=>{
+    slots[d]=visits.filter(v=>
+      +v.fid===+fid&&v.provType===provType&&
+      v.date===d&&v.status==='scheduled'&&!movedIds.has(v.id)
+    ).length;
+  });
+  // Assign each visit to least-loaded day under cap
+  toMove.forEach(v=>{
+    const under=days.filter(d=>slots[d]<cap).sort((a,b)=>slots[a]-slots[b]);
+    const best=under[0]||[...days].sort((a,b)=>slots[a]-slots[b])[0];
+    v.date=best;
+    slots[best]=(slots[best]||0)+1;
+  });
+}
+
+function redistributeNP(fid,ym){
+  const fac=facilities.find(f=>+f.id===+fid);if(!fac)return;
+  redistributeProvider(fid,'NP',ym,getNPDays(fac,ym),NP_CAP);
+}
+function redistributeMD(fid,ym){
+  const fac=facilities.find(f=>+f.id===+fid);if(!fac)return;
+  redistributeProvider(fid,'Physician',ym,getMDDays(fac,ym),MD_CAP);
+}
+function redistributeLPN(fid,ym){
+  const fac=facilities.find(f=>+f.id===+fid);if(!fac||!fac.lpns||!fac.lpns.length)return;
+  fac.lpns.forEach(lpn=>{
+    const lname=lpn.name||lpn;
+    const toMove=visits.filter(v=>
+      +v.fid===+fid&&v.provType==='LPN'&&v.prov===lname&&
+      v.status==='scheduled'&&monthKey(v.date)===ym
+    );
+    if(!toMove.length)return;
+    const days=allDaysInMonth(ym).filter(d=>{const w=dayOfWeek(d);return w>=1&&w<=5;});
+    if(!days.length)return;
+    toMove.sort((a,b)=>{const r={'Chronic Care Management':0,'PHQ-9 Assessment':1};return(r[a.type]??2)-(r[b.type]??2);});
+    const slots={};days.forEach(d=>slots[d]=0);
+    toMove.forEach(v=>{
+      const under=days.filter(d=>slots[d]<LPN_CAP).sort((a,b)=>slots[a]-slots[b]);
+      const best=under[0]||days.sort((a,b)=>slots[a]-slots[b])[0];
+      v.date=best;slots[best]=(slots[best]||0)+1;
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// APPLY RULES
+// ════════════════════════════════════════════════════════════════
+function applyRules(){
+  const fac=facilities.find(f=>f.id===curFid);
+  if(!fac){toast('No facility selected');return;}
+  const fps=patients.filter(p=>+p.fid===curFid);
+  if(!fps.length){toast('No patients in this facility');return;}
+  const activeRules=rules.filter(r=>r.active);
+  if(!activeRules.length){alert('No active rules. Go to Schedule Rules to enable rules.');return;}
+  const npDows=getFacDays(fac,'np').map(d=>DOW_LABELS[d]).join(', ')||'⚠ None set';
+  const mdDows=getFacDays(fac,'md').map(d=>DOW_LABELS[d]).join(', ')||'⚠ None set';
+  $i('apply-preview').innerHTML=
+    `<strong>${fps.length} patients</strong> at <strong>${fac.name}</strong><br>
+     <strong>${activeRules.length} active rules</strong><br><br>
+     🩺 NP: ${fac.np||'—'} &nbsp;·&nbsp; Days: <strong>${npDows}</strong><br>
+     👨‍⚕️ MD: ${fac.md||'—'} &nbsp;·&nbsp; Days: <strong>${mdDows}</strong><br>
+     💊 LPNs: ${(fac.lpns||[]).map(l=>l.name).join(', ')||'None'}`;
+  openModal('m-apply');
+}
+
+async function confirmApply(){
+  const fac=facilities.find(f=>f.id===curFid);
+  if(!fac){closeModal('m-apply');return;}
+  const fps=patients.filter(p=>+p.fid===curFid);
+  const today=todayStr();
+  showLoader('Generating schedule…');
+
+  // 1. Clear future scheduled visits for this facility
+  visits=visits.filter(v=>!(+v.fid===curFid&&v.status==='scheduled'&&v.date>=today));
+
+  // 2. Generate visits for every patient
+  let genCount=0;
+  fps.forEach(p=>{
+    try{genVisitsForPatient(p,fac);genCount++;}
+    catch(e){console.error('Gen error for',p.last,p.first,e);}
+  });
+
+  // 3. Redistribute visits evenly across set days
+  const affectedMonths=new Set(
+    visits.filter(v=>+v.fid===curFid&&v.status==='scheduled'&&v.date>=today)
+      .map(v=>monthKey(v.date))
+  );
+  affectedMonths.forEach(ym=>{
+    redistributeNP(curFid,ym);
+    redistributeMD(curFid,ym);
+    redistributeLPN(curFid,ym);
+  });
+
+  // Count results
+  const npV=visits.filter(v=>+v.fid===curFid&&v.provType==='NP'&&v.status==='scheduled'&&v.date>=today).length;
+  const mdV=visits.filter(v=>+v.fid===curFid&&v.provType==='Physician'&&v.status==='scheduled'&&v.date>=today).length;
+  const lpnV=visits.filter(v=>+v.fid===curFid&&v.provType==='LPN'&&v.status==='scheduled'&&v.date>=today).length;
+  const totalV=npV+mdV+lpnV;
+  const ym0=monthKey(today);
+  const npDays0=getNPDays(fac,ym0);
+  const npMo=visits.filter(v=>+v.fid===curFid&&v.provType==='NP'&&v.status==='scheduled'&&monthKey(v.date)===ym0).length;
+  const npAvg=npDays0.length?Math.round(npMo/npDays0.length):0;
+
+  closeModal('m-apply');
+  renderFacDetail();
+  updateSb();
+
+  // Save to DB — await so we know it completed
+  const saved=await syncFacilityVisits(curFid);
+
+  if(saved){
+    alert(
+      `✓ Schedule saved for ${fac.name}\n\n`+
+      `${totalV} visits generated and saved to database\n`+
+      `  • NP: ${npV} (avg ${npAvg}/day)\n`+
+      `  • Physician: ${mdV}\n`+
+      `  • LPN: ${lpnV}\n\n`+
+      `This schedule will persist when you log out and back in.`
+    );
+  } else {
+    alert(`⚠ Schedule generated but FAILED to save to database.\n\nThe schedule is visible now but will reset on next login.\n\nCheck the DB status indicator in the bottom-left corner.`);
+  }
+}
+
+// Regen for a single patient only — does not affect anyone else
+function regenOnePatient(p){
+  const fac=facilities.find(f=>f.id===+p.fid);if(!fac)return;
+  const today=todayStr();
+  visits=visits.filter(v=>!(v.pid===p.id&&v.status==='scheduled'&&v.date>=today));
+  genVisitsForPatient(p,fac);
+  const mos=new Set(visits.filter(v=>v.pid===p.id&&v.status==='scheduled').map(v=>monthKey(v.date)));
+  mos.forEach(ym=>{redistributeNP(p.fid,ym);redistributeMD(p.fid,ym);redistributeLPN(p.fid,ym);});
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// VISIT ACTIONS — surgical, never triggers redistribution
+// ════════════════════════════════════════════════════════════════
+function delVis(id){
+  id=+id;
+  visits=visits.filter(v=>v.id!==id);
+  renderFacDetail();
+  // Delete from DB
+  delVisFromDB(id);
+}
+
+function markDone(id){
+  id=+id;
+  const v=visits.find(x=>x.id===id);
+  if(!v)return;
+  v.status='completed';
+  renderFacDetail();
+  syncVis(v).then(()=>toast('✓ Visit marked complete'));
+}
+
+// ════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function nav(pid,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('act'));
+  $i('page-'+pid).classList.add('active');
+  if(btn)btn.classList.add('act');
+  const fn={dash:renderDash,facs:renderFacs,allpats:renderAllPats,allvis:renderAllVis,rules:renderRules};
+  if(fn[pid])fn[pid]();
+}
+
+function renderAll(){
+  renderDash();renderFacs();renderAllPats();renderAllVis();renderRules();updateSb();
+  // Populate facility filters
+  const opts='<option value="">All Facilities</option>'+facilities.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+  ['dash-fac-filter','ap-fac','av-fac'].forEach(id=>{const s=$i(id);if(s)s.innerHTML=opts;});
+}
+
+function updateSb(){
+  const af=facilities.filter(f=>f.status==='active').length;
+  $i('sb-foot').innerHTML=`<div>${af} active facilities</div><div>${patients.length} patients · ${visits.filter(v=>v.status==='scheduled').length} sched.</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════════
+function renderDash(){
+  const today=todayStr();
+  const selDate=$i('dash-date-pick').value||today;
+  if(!$i('dash-date-pick').value) $i('dash-date-pick').value=today;
+  $i('dash-date').textContent=new Date(today+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const ff=$i('dash-fac-filter')?.value;
+  let facList=ff?facilities.filter(f=>String(f.id)===ff):facilities;
+
+  // Stats
+  const sched=visits.filter(v=>v.status==='scheduled').length;
+  const done=visits.filter(v=>v.status==='completed').length;
+  const census=patients.length;
+  const skilled=patients.filter(p=>p.type==='skilled'||p.type==='new-admission').length;
+  $i('dash-stats').innerHTML=
+    sc('Active Facilities',facilities.filter(f=>f.status==='active').length,'facilities','#58a6ff')+
+    sc('Total Census',census,'patients','#a371f7')+
+    sc('Skilled / New Admit',skilled,'active','#d29922')+
+    sc('Visits Scheduled',sched,'upcoming · '+done+' done','#3fb950');
+
+  // Provider daily schedule for selected date
+  let pdHtml='<div class="tw"><table><thead><tr><th>Provider</th><th>Role</th><th>Facility</th><th>Total</th><th>LT Visits</th><th>Skilled</th><th>Wellness</th><th>Load</th></tr></thead><tbody>';
+  facList.forEach(fac=>{
+    const dayVis=visits.filter(v=>+v.fid===+fac.id&&v.date===selDate&&v.status==='scheduled');
+    if(!dayVis.length) return;
+    const provMap={};
+    dayVis.forEach(v=>{
+      const k=v.prov+'|'+v.provType;
+      if(!provMap[k])provMap[k]={prov:v.prov,provType:v.provType,visits:[],fac:fac.name};
+      provMap[k].visits.push(v);
+    });
+    Object.values(provMap).forEach(({prov,provType,visits:pvs,fac:facName})=>{
+      const total=pvs.length;
+      const cap=provType==='NP'?30:provType==='Physician'?25:30;
+      const ltCnt=pvs.filter(v=>v.type&&(v.type.includes('Long-Term')||v.type.includes('Comprehensive')||v.type.includes('Follow-Up'))).length;
+      const skCnt=pvs.filter(v=>v.type&&(v.type.includes('Skilled')||v.type.includes('New Admission'))).length;
+      const wlCnt=pvs.filter(v=>v.type&&(v.type.includes('Wellness')||v.type.includes('AWV'))).length;
+      const pct=Math.min(Math.round(total/cap*100),100);
+      const col=total>cap?'var(--re)':total>=18?'var(--gr)':'var(--am)';
+      const roleColor={NP:'var(--ac)',Physician:'var(--pi)',LPN:'var(--gr)',Psych:'var(--pu)'}[provType]||'var(--mu)';
+      pdHtml+=`<tr><td style="font-weight:700">${prov||'—'}</td><td><span class="badge" style="background:rgba(0,0,0,.2);color:${roleColor}">${provType}</span></td><td style="font-size:12px">${facName}</td>
+        <td style="font-weight:700;color:${col}">${total}</td>
+        <td style="color:var(--mu);font-size:12px">${ltCnt||'—'}</td>
+        <td style="color:var(--mu);font-size:12px">${skCnt||'—'}</td>
+        <td style="color:var(--mu);font-size:12px">${wlCnt||'—'}</td>
+        <td><div class="prg" style="min-width:60px"><div class="prf" style="width:${pct}%;background:${col}"></div></div><div style="font-size:10px;color:${col}">${total}/${cap}</div></td>
+      </tr>`;
+    });
+  });
+  pdHtml+='</tbody></table></div>';
+  const dayTotal=visits.filter(v=>v.date===selDate&&v.status==='scheduled').length;
+  if(!dayTotal) pdHtml='<div class="empty">No visits scheduled for this date.</div>';
+  $i('dash-provider-sched').innerHTML=pdHtml;
+
+  // Upcoming 7 days
+  const t7=addDays(today,7);
+  const up=visits.filter(v=>v.status==='scheduled'&&v.date>=today&&v.date<=t7)
+    .sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
+  $i('dash-upcoming').innerHTML=up.length?up.map(v=>{
+    const p=patients.find(x=>x.id===v.pid),f=facilities.find(x=>x.id===+v.fid);
+    return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)">
+      <div><div style="font-weight:600;font-size:13px">${p?p.last+', '+p.first:'—'}</div>
+      <div style="font-size:11px;color:var(--mu)">${v.type} · ${f?f.name:'—'}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--ac)">${v.date}</div><div style="font-size:10px;color:var(--mu)">${v.prov}</div></div>
+    </div>`;
+  }).join(''):'<div class="empty">No upcoming visits</div>';
+
+  // Snapshot
+  $i('dash-snapshot').innerHTML=facilities.filter(f=>f.status==='active').map(f=>{
+    const fv=visits.filter(v=>+v.fid===+f.id),fd=fv.filter(v=>v.status==='completed').length;
+    const pct2=fv.length?Math.round(fd/fv.length*100):0;
+    const fp=patients.filter(p=>+p.fid===+f.id).length;
+    return`<div style="margin-bottom:10px;cursor:pointer" onclick="openFac(${f.id})">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="font-weight:700;color:var(--ac)">${f.name}</span>
+        <span style="color:var(--mu)">${fp} patients · ${pct2}% done</span>
+      </div>
+      <div class="prg"><div class="prf" style="width:${pct2}%;background:var(--ac)"></div></div>
+    </div>`;
+  }).join('')||'<div class="empty">No active facilities</div>';
+
+  // Populate counseling fac filter
+  const cff=$i('dash-counsel-fac');
+  if(cff&&cff.options.length<=1){
+    facilities.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;cff.appendChild(o);});
+  }
+
+  // Monthly provider tracker
+  renderMonthlyProviderTracker();
+
+  renderCounselingTracker();
+}
+
+function renderMonthlyProviderTracker(){
+  const el=$i('dash-monthly-tracker');if(!el)return;
+  const off=+($i('dash-month-pick')?.value||0);
+  const ym=monthKey(addMonths(todayStr(),off));
+  const label=mLabel(ym);
+
+  // Build provider list from all facilities
+  const provMap={};
+  facilities.forEach(fac=>{
+    const addProv=(name,role,cap)=>{
+      if(!name) return;
+      const key=name+'|'+role;
+      if(!provMap[key]) provMap[key]={name,role,cap,facilities:[],visits:0,done:0,byFac:{}};
+      if(!provMap[key].facilities.includes(fac.name)) provMap[key].facilities.push(fac.name);
+      if(!provMap[key].byFac[fac.name]) provMap[key].byFac[fac.name]=0;
+    };
+    if(fac.np) addProv(fac.np,'NP',30);
+    if(fac.md) addProv(fac.md,'Physician',25);
+    (fac.lpns||[]).forEach(l=>addProv(l.name||l,'LPN',30));
+    (fac.psychProviders||[]).forEach(p=>addProv(p.name||p,'Psych',20));
+  });
+
+  // Count visits for the selected month
+  visits.filter(v=>monthKey(v.date)===ym).forEach(v=>{
+    const key=v.prov+'|'+v.provType;
+    if(provMap[key]){
+      if(v.status==='scheduled') provMap[key].visits++;
+      if(v.status==='completed') provMap[key].done++;
+      const fac=facilities.find(f=>+f.id===+v.fid);
+      if(fac&&provMap[key].byFac[fac.name]!==undefined) provMap[key].byFac[fac.name]++;
+    }
+  });
+
+  const provList=Object.values(provMap).sort((a,b)=>{
+    const roleOrder={NP:0,Physician:1,LPN:2,Psych:3};
+    return (roleOrder[a.role]??4)-(roleOrder[b.role]??4)||a.name.localeCompare(b.name);
+  });
+
+  if(!provList.length){
+    el.innerHTML='<div class="empty">No providers found. Add facilities with provider names.</div>';
+    return;
+  }
+
+  const roleColor={NP:'var(--ac)',Physician:'var(--pi)',LPN:'var(--gr)',Psych:'var(--pu)'};
+  let html=`<div style="font-size:11px;color:var(--mu);margin-bottom:10px">${label}</div>`;
+  html+='<div style="overflow-x:auto"><table><thead><tr><th>Provider</th><th>Role</th><th>Facilities</th><th>Scheduled</th><th>Completed</th><th>Total</th><th>Progress</th></tr></thead><tbody>';
+
+  provList.forEach(({name,role,cap,facilities:facs,visits:sched,done,byFac})=>{
+    const total=sched+done;
+    const col=roleColor[role]||'var(--mu)';
+    // Estimate days this month × cap for expected total
+    const expected=cap*20; // rough estimate
+    const pct=expected?Math.min(Math.round(total/expected*100),100):0;
+    const barColor=done>0?'var(--gr)':'var(--ac)';
+    const facBreakdown=Object.entries(byFac)
+      .filter(([,n])=>n>0)
+      .map(([f,n])=>`<span style="font-size:10px;color:var(--mu)">${f}: ${n}</span>`)
+      .join(' · ');
+    html+=`<tr>
+      <td style="font-weight:700">${name}</td>
+      <td><span style="font-size:11px;font-weight:600;color:${col}">${role}</span></td>
+      <td style="font-size:11px;color:var(--mu)">${facs.join(', ')}</td>
+      <td style="font-weight:700;color:var(--ac)">${sched}</td>
+      <td style="font-weight:700;color:var(--gr)">${done}</td>
+      <td style="font-weight:700">${total}</td>
+      <td style="min-width:120px">
+        <div class="prg"><div class="prf" style="width:${Math.min(Math.round(done/(total||1)*100),100)}%;background:var(--gr)"></div></div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">${done} done · ${sched} pending</div>
+        ${facBreakdown?`<div style="margin-top:2px">${facBreakdown}</div>`:''}
+      </td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+function sc(label,val,sub,color){
+  return`<div class="sc"><div class="sl">${label}</div><div class="sv" style="color:${color}">${val}</div><div class="ss">${sub}</div></div>`;
+}
+
+function renderCounselingTracker(){
+  const el=$i('dash-counsel-tracker');if(!el)return;
+  const ff=$i('dash-counsel-fac')?.value;
+  const today=todayStr();
+  const yearStart=today.substring(0,4)+'-01-01';
+  const yearEnd=today.substring(0,4)+'-12-31';
+
+  // Counseling & Wellness types with targets
+  const trackers=[
+    {type:'Annual Wellness Visit',target:1,color:'#34d399',icon:'🌿',label:'Annual Wellness Visit',period:'annual'},
+    {type:'Female Wellness Visit',target:2,color:'#f472b6',icon:'♀',label:'Female Wellness (Semi-Annual)',period:'annual'},
+    {type:'Male Wellness Visit',target:2,color:'#60a5fa',icon:'♂',label:'Male Wellness (Semi-Annual)',period:'annual'},
+    {type:'Smoking Cessation Counseling',target:8,color:'#f87171',icon:'🚬',label:'Smoking Cessation',period:'annual'},
+    {type:'Alcohol Use Counseling',target:6,color:'#fb923c',icon:'🍷',label:'Alcohol Counseling',period:'annual'},
+    {type:'Advance Care Planning',target:1,color:'#60a5fa',icon:'📋',label:'Advance Care Planning',period:'annual'},
+  ];
+
+  let pats=patients;
+  if(ff) pats=pats.filter(p=>String(p.fid)===String(ff));
+  if(!pats.length){el.innerHTML='<div class="empty">No patients found.</div>';return;}
+
+  let html='';
+
+  trackers.forEach(tr=>{
+    // All visits of this type this year
+    const allVis=visits.filter(v=>
+      v.type===tr.type&&v.date>=yearStart&&v.date<=yearEnd&&
+      (ff?String(v.fid)===String(ff):true)
+    );
+    const doneVis=allVis.filter(v=>v.status==='completed');
+    const schedVis=allVis.filter(v=>v.status==='scheduled');
+
+    // Per-patient tracking
+    const patRows=pats.map(p=>{
+      const pv=allVis.filter(v=>v.pid===p.id);
+      const done=pv.filter(v=>v.status==='completed').length;
+      const sched=pv.filter(v=>v.status==='scheduled').length;
+      const total=done+sched;
+      const pct=Math.min(Math.round(total/tr.target*100),100);
+      const fac=facilities.find(f=>f.id===+p.fid);
+      return{p,done,sched,total,pct,fac};
+    }).sort((a,b)=>a.total-b.total); // show least done first
+
+    const overallDone=doneVis.length;
+    const overallSched=schedVis.length;
+    const patsComplete=patRows.filter(r=>r.total>=tr.target).length;
+    const patsOverdue=patRows.filter(r=>r.total<tr.target&&r.done<tr.target).length;
+
+    html+=`<div style="border:1px solid var(--bd);border-radius:8px;margin-bottom:12px;overflow:hidden">
+      <div style="padding:10px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${tr.icon}</span>
+          <div>
+            <div style="font-weight:700;font-size:13px">${tr.label}</div>
+            <div style="font-size:11px;color:var(--mu)">Target: ${tr.target}× per year &nbsp;·&nbsp; ${patsComplete}/${pats.length} patients on track</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;font-size:12px">
+          <span style="color:var(--gr)"><strong>${overallDone}</strong> completed</span>
+          <span style="color:var(--ac)"><strong>${overallSched}</strong> scheduled</span>
+          ${patsOverdue?`<span style="color:var(--re)"><strong>${patsOverdue}</strong> need attention</span>`:''}
+          <button class="btn bp bsm" onclick="openAddCounselingVis('${tr.type}')">+ Add Visit</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;max-height:220px;overflow-y:auto">
+        <table style="margin-bottom:0">
+          <thead><tr><th>Patient</th><th>Facility</th><th>Done This Year</th><th>Scheduled</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${patRows.slice(0,50).map(({p,done,sched,total,pct,fac})=>{
+              const onTrack=total>=tr.target;
+              const behind=!onTrack&&done<tr.target;
+              return`<tr style="${behind&&done===0?'background:rgba(248,81,73,.04)':''}">
+                <td style="font-weight:600;font-size:12px">${p.last}, ${p.first}</td>
+                <td style="font-size:11px;color:var(--mu)">${fac?fac.name:'—'}</td>
+                <td style="text-align:center;font-weight:700;color:${done>=tr.target?'var(--gr)':'var(--tx)'}">${done}</td>
+                <td style="text-align:center;color:var(--ac)">${sched}</td>
+                <td style="min-width:80px">
+                  <div class="prg"><div class="prf" style="width:${pct}%;background:${onTrack?'var(--gr)':pct>50?'var(--am)':'var(--re)'}"></div></div>
+                  <div style="font-size:9px;color:var(--mu)">${total}/${tr.target}</div>
+                </td>
+                <td>${onTrack?'<span class="badge bg_">✓ On Track</span>':sched>0?'<span class="badge bb">Scheduled</span>':'<span class="badge br_">Needs Visit</span>'}</td>
+                <td><button class="btn bsm" style="font-size:10px;padding:2px 7px" onclick="openAddCounselingVisForPat('${tr.type}',${p.id})">+</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML=html;
+}
+
+function openAddCounselingVis(type){
+  // Open the add visit modal pre-filled with counseling type
+  openAddVisManual();
+  setTimeout(()=>{$i('mv-type').value=type;},50);
+}
+function openAddCounselingVisForPat(type,pid){
+  openAddVisManual();
+  setTimeout(()=>{
+    $i('mv-pat').value=pid;
+    $i('mv-type').value=type;
+    mvFill();
+  },50);
+}
+
+// ════════════════════════════════════════════════════════════════
+// FACILITIES
+// ════════════════════════════════════════════════════════════════
+function renderFacs(){
+  const facList=facilities;
+  $i('facs-sub').textContent=facList.length+' facilities';
+  $i('fac-grid').innerHTML=facList.length?facList.map(f=>{
+    const fp=patients.filter(p=>+p.fid===+f.id).length;
+    const fv=visits.filter(v=>+v.fid===+f.id);
+    const done=fv.filter(v=>v.status==='completed').length;
+    const pct=fv.length?Math.round(done/fv.length*100):0;
+    const npDows=getFacDays(f,'np').map(d=>DOW_LABELS[d]).join(', ')||'—';
+    const mdDows=getFacDays(f,'md').map(d=>DOW_LABELS[d]).join(', ')||'—';
+    return`<div class="card" style="border-left:3px solid ${f.status==='active'?'var(--gr)':'var(--bd)'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <div style="cursor:pointer" onclick="openFac(${f.id})"><div style="font-weight:700;font-size:15px">${f.name}</div><div style="font-size:11px;color:var(--mu)">${f.region||''}</div></div>
+        <button class="btn bsm" onclick="openEditFac(${f.id})">✏ Edit</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:10px">
+        <div><span style="color:var(--mu)">NP: </span>${f.np||'—'}<span style="font-size:10px;color:var(--mu)"> · ${npDows}</span></div>
+        <div><span style="color:var(--mu)">MD: </span>${f.md||'—'}<span style="font-size:10px;color:var(--mu)"> · ${mdDows}</span></div>
+        <div><span style="color:var(--mu)">Patients: </span><strong>${fp}</strong></div>
+        <div><span style="color:var(--mu)">Completion: </span><strong>${pct}%</strong></div>
+      </div>
+      <div class="prg"><div class="prf" style="width:${pct}%;background:var(--gr)"></div></div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn bp bsm" style="flex:1" onclick="openFac(${f.id})">Open →</button>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty">No facilities yet. Click + Add Facility to get started.</div>';
+}
+
+// Day-of-week checkbox builder
+function buildDowCheckboxes(containerId,selected=[]){
+  const el=$i(containerId);if(!el)return;
+  el.innerHTML=DOW_LABELS.map((l,i)=>`
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px;background:${selected.includes(i)?'rgba(88,166,255,.15)':'transparent'};border-color:${selected.includes(i)?'var(--ac)':'var(--bd)'}">
+      <input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''} style="accent-color:var(--ac)"> ${l}
+    </label>`).join('');
+}
+function getDowSelected(containerId){
+  const el=$i(containerId);if(!el)return[];
+  return [...el.querySelectorAll('input[type=checkbox]:checked')].map(cb=>+cb.value);
+}
+
+function openModal(id){const m=$i(id);if(m){m.classList.add('open');m.style.display='flex';}}
+function closeModal(id){const m=$i(id);if(m){m.classList.remove('open');m.style.display='';;}}
+
+function saveFac(){
+  const name=$i('af-name').value.trim();
+  if(!name){alert('Name required.');return;}
+  const fac={
+    id:++nid,name,
+    np:$i('af-np').value.trim(),npCred:$i('af-npc').value.trim()||'NP',
+    md:$i('af-md').value.trim(),mdCred:$i('af-mdc').value.trim()||'MD',
+    region:$i('af-region').value.trim(),status:$i('af-status').value,
+    npDays:getDowSelected('af-np-days'),mdDays:getDowSelected('af-md-days'),
+    lpns:[],psychProviders:[]
+  };
+  facilities.push(fac);
+  closeModal('m-addfac');
+  renderFacs();updateSb();
+  syncFac(fac).then(()=>toast('✓ Facility saved'));
+}
+
+function openEditFac(fid){
+  try{
+    fid=+fid;
+    const f=facilities.find(x=>+x.id===fid);
+    if(!f){alert('Facility not found (id='+fid+')');return;}
+    _editFacId=fid;
+    $i('ef-name').value=f.name||'';
+    $i('ef-np').value=f.np||'';
+    $i('ef-npc').value=f.npCred||'NP';
+    $i('ef-md').value=f.md||'';
+    $i('ef-mdc').value=f.mdCred||'MD';
+    $i('ef-region').value=f.region||'';
+    $i('ef-status').value=f.status||'active';
+    $i('ef-lpns').value=(f.lpns||[]).map(l=>typeof l==='string'?l:l.name||'').join(', ');
+    $i('ef-psych').value=(f.psychProviders||[]).map(p=>typeof p==='string'?p:p.name||'').join(', ');
+    const npSel=Array.isArray(f.npDays)?f.npDays:[];
+    const mdSel=Array.isArray(f.mdDays)?f.mdDays:[];
+    buildDowCheckboxes('ef-np-days',npSel);
+    buildDowCheckboxes('ef-md-days',mdSel);
+    // Force modal open directly
+    const modal=$i('m-editfac');
+    if(modal){
+      modal.style.display='flex';
+      modal.classList.add('open');
+    } else {
+      alert('Edit modal not found in DOM');
+    }
+  }catch(err){
+    alert('Error opening edit: '+err.message);
+    console.error('openEditFac error:',err);
+  }
+}
+let _editFacId=null;
+
+function updateFac(){
+  const f=facilities.find(x=>x.id===(_editFacId||curFid));if(!f)return;
+  const oldNP=f.np, oldMD=f.md;
+  f.name=$i('ef-name').value.trim();
+  f.np=$i('ef-np').value.trim();f.npCred=$i('ef-npc').value.trim();
+  f.md=$i('ef-md').value.trim();f.mdCred=$i('ef-mdc').value.trim();
+  f.region=$i('ef-region').value.trim();f.status=$i('ef-status').value;
+  f.npDays=getDowSelected('ef-np-days');
+  f.mdDays=getDowSelected('ef-md-days');
+  // Parse LPNs
+  f.lpns=$i('ef-lpns').value.split(',').map(s=>s.trim()).filter(Boolean).map(n=>({id:'lpn'+n.replace(/\s/g,''),name:n,cred:'LPN'}));
+  f.psychProviders=$i('ef-psych').value.split(',').map(s=>s.trim()).filter(Boolean).map(n=>({id:'psych'+n.replace(/\s/g,''),name:n,cred:'LCSW'}));
+  // Update provider name on existing visits if changed
+  const fid=_editFacId||curFid;
+  if(oldNP!==f.np) visits.filter(v=>+v.fid===fid&&v.provType==='NP'&&v.prov===oldNP).forEach(v=>v.prov=f.np);
+  if(oldMD!==f.md) visits.filter(v=>+v.fid===fid&&v.provType==='Physician'&&v.prov===oldMD).forEach(v=>v.prov=f.md);
+  closeModal('m-editfac');
+  renderFacs();
+  if(curFid===fid) renderFacDetail();
+  updateSb();
+  syncFac(f).then(()=>toast('✓ Facility updated — click ⚡ Apply Rules to regenerate schedule with new days'));
+}
+
+function deleteFac(){
+  const fid=_editFacId||curFid;
+  const f=facilities.find(x=>x.id===fid);if(!f)return;
+  if(!confirm(`Delete "${f.name}"? This will remove all patients and visits.`))return;
+  patients=patients.filter(p=>+p.fid!==fid);
+  visits=visits.filter(v=>+v.fid!==fid);
+  facilities=facilities.filter(x=>x.id!==fid);
+  if(_sbFacMap[fid]){sbDel('facilities',_sbFacMap[fid]);delete _sbFacMap[fid];}
+  closeModal('m-editfac');
+  if(curFid===fid){curFid=null;nav('facs',document.querySelector('.nb:nth-child(2)'));}
+  else renderFacs();
+  updateSb();
+}
+
+// ════════════════════════════════════════════════════════════════
+// FACILITY DETAIL
+// ════════════════════════════════════════════════════════════════
+function openFac(fid){
+  curFid=+fid;curFdTab='np';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('act'));
+  $i('page-fd').classList.add('active');
+  renderFacDetail();
+}
+
+function setFdTab(tab,btn){
+  curFdTab=tab;
+  document.querySelectorAll('#fd-tabs .tab').forEach(b=>b.classList.remove('act'));
+  if(btn)btn.classList.add('act');
+  renderFacDetail();
+}
+
+function renderFacDetail(){
+  const fac=facilities.find(f=>f.id===curFid);
+  if(!fac){$i('fd-pane').innerHTML='<div class="empty">Facility not found.</div>';return;}
+  $i('fd-title').textContent=fac.name;
+  $i('fd-sub').textContent=(fac.region?fac.region+' · ':'')+`NP: ${fac.np||'—'} · MD: ${fac.md||'—'}`;
+  const fps=patients.filter(p=>+p.fid===curFid);
+  const fvs=visits.filter(v=>+v.fid===curFid);
+  const sk=fps.filter(p=>p.type==='skilled').length;
+  const lt=fps.filter(p=>p.type==='long-term').length;
+  const na=fps.filter(p=>p.type==='new-admission').length;
+  const sd=fvs.filter(v=>v.status==='scheduled').length;
+  const cd=fvs.filter(v=>v.status==='completed').length;
+  $i('fd-stats').innerHTML=
+    sc('Patients',fps.length,`${lt} LT · ${sk} Skilled · ${na} New Admit`,'var(--pu)')+
+    sc('Scheduled',sd,'upcoming visits','var(--ac)')+
+    sc('Completed',cd,'visits done','var(--gr)')+
+    sc('Completion',fvs.length?Math.round(cd/fvs.length*100)+'%':'—','overall rate','var(--am)');
+
+  if(curFdTab==='np') renderProvSched('NP',fac);
+  else if(curFdTab==='md') renderProvSched('Physician',fac);
+  else if(curFdTab==='lpn') renderLPNPane(fac);
+  else if(curFdTab==='psych') renderPsychPane(fac);
+  else if(curFdTab==='census') renderCensusPane(fac);
+}
+
+// ─── NP / MD SCHEDULE PANE ───────────────────────────────────
+let npMonthOff=0, mdMonthOff=0;
+function setMonthOff(role,n){if(role==='NP')npMonthOff=n;else mdMonthOff=n;renderFacDetail();}
+
+function renderProvSched(provType,fac){
+  const isNP=provType==='NP';
+  const off=isNP?npMonthOff:mdMonthOff;
+  const today=todayStr();
+  const ym=monthKey(addMonths(today,off));
+  const dows=getFacDays(fac,isNP?'np':'md');
+  const scheduledDays=getScheduledDaysInMonth(fac,isNP?'np':'md',ym);
+  const NP_CAP=30, MD_CAP=25;
+  const cap=isNP?NP_CAP:MD_CAP;
+
+  // Summary
+  const dayVisits=visits.filter(v=>+v.fid===curFid&&v.provType===provType&&v.status==='scheduled'&&monthKey(v.date)===ym);
+  const doneVis=visits.filter(v=>+v.fid===curFid&&v.provType===provType&&v.status==='completed'&&monthKey(v.date)===ym);
+  const avgPerDay=scheduledDays.length?Math.round(dayVisits.length/scheduledDays.length):0;
+
+  let html=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-weight:700;font-size:14px">${isNP?'🩺':'👨‍⚕️'} ${isNP?fac.np||'NP':fac.md||'Physician'} <span style="font-size:11px;color:var(--mu)">${isNP?fac.npCred||'NP':fac.mdCred||'MD'}</span></div>
+        <div style="font-size:11px;color:var(--mu);margin-top:3px">
+          Scheduled days: ${dows.map(d=>DOW_LABELS[d]).join(', ')||'<span style="color:var(--am)">None — edit facility to set days</span>'}
+          &nbsp;·&nbsp; ${scheduledDays.length} days this month
+          &nbsp;·&nbsp; <span style="color:${avgPerDay>=18&&avgPerDay<=30?'var(--gr)':avgPerDay>0?'var(--am)':'var(--mu)'}">avg ${avgPerDay}/day</span>
+          (target: ${isNP?'18-30':'15-25'})
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn bsm" onclick="openAddVisForProv('${provType}','${isNP?fac.np||'':fac.md||''}','${ym+'-01'}')">+ Add Visit</button>
+        <button class="btn bp bsm" onclick="applyRules()">⚡ Apply Rules</button>
+      </div>
+    </div>
+    <!-- Month navigation -->
+    <div class="tabs" style="margin-bottom:12px">
+      ${[-1,0,1,2,3].map(i=>`<button class="tab ${i===off?'act':''}" onclick="setMonthOff('${provType}',${i})">${i===0?'This Month':mLabel(monthKey(addMonths(today,i)))}</button>`).join('')}
+    </div>
+    <!-- Month stats -->
+    <div style="display:flex;gap:16px;margin-bottom:12px;font-size:12px;padding:8px 12px;background:var(--sb);border-radius:8px">
+      <span><strong style="color:var(--ac)">${dayVisits.length}</strong> <span style="color:var(--mu)">scheduled</span></span>
+      <span><strong style="color:var(--gr)">${doneVis.length}</strong> <span style="color:var(--mu)">completed</span></span>
+      <span><strong>${scheduledDays.length}</strong> <span style="color:var(--mu)">provider days</span></span>
+      ${dayVisits.length&&scheduledDays.length?`<span><strong style="color:${avgPerDay>=18&&avgPerDay<=30?'var(--gr)':'var(--am)'}">${avgPerDay}/day avg</strong></span>`:''}
+    </div>`;
+
+  // Build schedule grid
+  // Get all dates that have visits OR are scheduled provider days
+  const allDates=new Set([...scheduledDays,...dayVisits.map(v=>v.date),...doneVis.map(v=>v.date)]);
+  const sorted=[...allDates].sort();
+  const pb={}; patients.forEach(p=>pb[p.id]=p);
+
+  if(!sorted.length){
+    html+=`<div class="wbox">No visits scheduled this month.<br>
+      ${!dows.length?'First set provider days by editing the facility, then ':''}
+      Click <strong>⚡ Apply Rules</strong> to generate the schedule.
+    </div>`;
+  } else {
+    html+='<div class="sched-grid">';
+    sorted.forEach(date=>{
+      const dvs=visits.filter(v=>v.pid&&+v.fid===curFid&&v.provType===provType&&v.date===date);
+      const cnt=dvs.length;
+      const isProvDay=scheduledDays.includes(date);
+      const cntClass=cnt>cap?'over':cnt>=18?'good':cnt>0?'warn':'';
+      html+=`<div class="day-col" style="${!isProvDay?'border-color:rgba(248,81,73,.25)':''}">
+        <div class="day-head">
+          <div>
+            <div class="day-name">${dLabel(date)}</div>
+            ${!isProvDay?'<div style="font-size:9px;color:var(--re)">off-day</div>':''}
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span class="day-cnt ${cntClass}">${cnt}/${cap}</span>
+            <button class="btn bp bsm" style="padding:1px 5px;font-size:10px" onclick="openAddVisForProv('${provType}','${isNP?fac.np||'':fac.md||''}','${date}')">+</button>
+          </div>
+        </div>`;
+      dvs.forEach(v=>{
+        const p=pb[v.pid];
+        const vcClass=getVCClass(v.type,provType);
+        const isDone=v.status==='completed';
+        html+=`<div class="vchip ${vcClass}${isDone?' done':''}${v.optional?' vc-op':''}">
+          <div style="flex:1;min-width:0">
+            <div class="vname">${p?p.last+', '+p.first:'—'}</div>
+            <div class="vtype">${v.type}${v.optional?'<span class="opt-badge">optional</span>':''}</div>
+          </div>
+          ${!isDone?`<button class="vok" onclick="markDone(${v.id})" title="Mark done">✓</button>`:''}
+          <button class="vbtn" onclick="delVis(${v.id})" title="Remove visit">✕</button>
+        </div>`;
+      });
+      if(!dvs.length&&isProvDay){
+        html+=`<div style="padding:6px 8px;font-size:10px;color:var(--mu)">No visits — click + to add</div>`;
+      }
+      html+='</div>'; // day-col
+    });
+    html+='</div>'; // sched-grid
+  }
+
+  // Upcoming Wellness panel for NP
+  if(isNP){
+    const wellTypes=['Annual Wellness Visit','Female Wellness Visit','Male Wellness Visit','Monthly Follow-Up'];
+    const wellVis=visits.filter(v=>+v.fid===curFid&&v.provType==='NP'&&wellTypes.some(t=>v.type.includes(t.split(' ')[0]))&&v.status==='scheduled'&&v.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,12);
+    if(wellVis.length){
+      html+=`<div style="margin-top:14px;padding:12px;background:var(--sb);border-radius:8px;border:1px solid var(--bd)">
+        <div class="stit">📋 Upcoming Wellness &amp; Optional Visits</div>
+        ${wellVis.map(v=>{const p=pb[v.pid];return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:12px">
+          <div><span style="font-weight:600">${p?p.last+', '+p.first:'—'}</span><span style="color:var(--mu);margin-left:6px">${v.type}</span>${v.optional?'<span class="opt-badge">opt</span>':''}</div>
+          <div style="color:var(--ac)">${v.date}</div>
+        </div>`}).join('')}
+      </div>`;
+    }
+  }
+
+  html+='</div>'; // card
+  $i('fd-pane').innerHTML=html;
+}
+
+function getVCClass(type,provType){
+  if(!type) return '';
+  const t=type.toLowerCase();
+  if(provType==='LPN') return 'vc-lp';
+  if(t.includes('skilled')) return 'vc-sk';
+  if(t.includes('new admission')||t.includes('new admit')) return 'vc-na';
+  if(t.includes('wellness')||t.includes('awv')) return 'vc-aw';
+  if(t.includes('follow-up')||t.includes('follow up')||t.includes('followup')) return 'vc-fu';
+  if(provType==='Physician') return 'vc-md';
+  return 'vc-lt';
+}
+
+let lpnMonthOff=0;
+function setLPNMonthOff(n){lpnMonthOff=n;renderFacDetail();}
+
+function renderLPNPane(fac){
+  const lpns=fac.lpns||[];
+  const fps=patients.filter(p=>+p.fid===curFid);
+  const today=todayStr();
+  const ym=monthKey(addMonths(today,lpnMonthOff));
+  const pb={};patients.forEach(p=>pb[p.id]=p);
+
+  let html=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-weight:700;font-size:14px;color:var(--gr)">💊 LPN Schedule</div>
+        <div style="font-size:11px;color:var(--mu)">${lpns.length?lpns.map(l=>l.name||l).join(', '):'No LPNs — add via Edit Facility'} · ${fps.length} patients</div>
+      </div>
+      <div class="row">
+        <button class="btn bp bsm" onclick="applyRules()">⚡ Apply Rules</button>
+      </div>
+    </div>
+    <div class="tabs" style="margin-bottom:12px">
+      ${[-1,0,1,2,3].map(i=>`<button class="tab ${i===lpnMonthOff?'act':''}" onclick="setLPNMonthOff(${i})">${i===0?'This Month':mLabel(monthKey(addMonths(today,i)))}</button>`).join('')}
+    </div>`;
+
+  // Stats bar
+  const lpnVis=visits.filter(v=>+v.fid===curFid&&v.provType==='LPN'&&v.status==='scheduled'&&monthKey(v.date)===ym);
+  const lpnDone=visits.filter(v=>+v.fid===curFid&&v.provType==='LPN'&&v.status==='completed'&&monthKey(v.date)===ym);
+  const t7=addDays(today,6);
+  const weekVis=visits.filter(v=>+v.fid===curFid&&v.provType==='LPN'&&v.status==='scheduled'&&v.date>=today&&v.date<=t7);
+
+  html+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;padding:10px;background:var(--sb);border-radius:8px">
+    <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--gr)">${fps.length}</div><div style="font-size:10px;color:var(--mu)">Residents</div></div>
+    <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--ac)">${lpnVis.length}</div><div style="font-size:10px;color:var(--mu)">Sched. This Month</div></div>
+    <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--gr)">${lpnDone.length}</div><div style="font-size:10px;color:var(--mu)">Done This Month</div></div>
+    <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--am)">${weekVis.length}</div><div style="font-size:10px;color:var(--mu)">This Week</div></div>
+  </div>`;
+
+  if(!lpns.length){
+    html+=`<div class="wbox">No LPNs assigned. Click <strong>✏ Edit Facility</strong> to add LPN names, then click <strong>⚡ Apply Rules</strong>.</div>`;
+  } else if(!lpnVis.length&&!lpnDone.length){
+    html+=`<div class="wbox">No LPN visits scheduled for ${mLabel(ym)}. Click <strong>⚡ Apply Rules</strong> to generate the schedule.</div>`;
+  } else {
+    // Show schedule grid per LPN
+    lpns.forEach(lpn=>{
+      const lname=lpn.name||lpn;
+      const lv=visits.filter(v=>+v.fid===curFid&&v.provType==='LPN'&&v.prov===lname&&monthKey(v.date)===ym).sort((a,b)=>a.date.localeCompare(b.date));
+      const ldone=lv.filter(v=>v.status==='completed').length;
+      const lsched=lv.filter(v=>v.status==='scheduled').length;
+      const daily=lv.filter(v=>v.type&&(v.type==='LPN Daily Standard'||v.type.toLowerCase().includes('daily'))).length;
+      const ccm=lv.filter(v=>v.type&&(v.type==='Chronic Care Management'||v.type.toLowerCase().includes('chronic')||v.type.toLowerCase().includes('ccm'))).length;
+      const phq=lv.filter(v=>v.type&&(v.type==='PHQ-9 Assessment'||v.type.toLowerCase().includes('phq'))).length;
+
+      html+=`<div style="border:1px solid rgba(63,185,80,.2);border-radius:8px;padding:12px;margin-bottom:12px;background:rgba(63,185,80,.02)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <span style="font-weight:700;color:var(--gr)">${lname}</span>
+            <span style="font-size:11px;color:var(--mu);margin-left:8px">${lsched} scheduled · ${ldone} done</span>
+            <div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap">
+              ${daily?`<span style="font-size:10px;background:rgba(63,185,80,.15);color:var(--gr);padding:1px 7px;border-radius:4px">${daily} Daily</span>`:''}
+              ${ccm?`<span style="font-size:10px;background:rgba(210,153,34,.15);color:var(--am);padding:1px 7px;border-radius:4px">${ccm} CCM</span>`:''}
+              ${phq?`<span style="font-size:10px;background:rgba(163,113,247,.15);color:var(--pu);padding:1px 7px;border-radius:4px">${phq} PHQ-9</span>`:''}
+            </div>
+          </div>
+          <button class="btn bsm" onclick="openAddVisForProv('LPN','${lname}','${today}')">+ Add Visit</button>
+        </div>`;
+
+      if(lv.length){
+        // Group by date
+        const byDate={};
+        lv.forEach(v=>{if(!byDate[v.date])byDate[v.date]=[];byDate[v.date].push(v);});
+        html+='<div class="sched-grid">';
+        Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([date,dvs])=>{
+          const cnt=dvs.length;
+          const cntClass=cnt>30?'over':cnt>=20?'good':'warn';
+          html+=`<div class="day-col">
+            <div class="day-head">
+              <div class="day-name">${dLabel(date)}</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span class="day-cnt ${cntClass}">${cnt}</span>
+                <button class="btn bp bsm" style="padding:1px 5px;font-size:10px" onclick="openAddVisForProv('LPN','${lname}','${date}')">+</button>
+              </div>
+            </div>`;
+          dvs.forEach(v=>{
+            const pt=pb[v.pid];
+            const isDone=v.status==='completed';
+            const vt=(v.type||'').toLowerCase();
+            const isCCM=vt.includes('chronic')||vt.includes('ccm');
+            const isPHQ=vt.includes('phq')||vt.includes('quarterly');
+            const chipStyle=isCCM?'background:rgba(210,153,34,.1);border-color:rgba(210,153,34,.25)':isPHQ?'background:rgba(163,113,247,.1);border-color:rgba(163,113,247,.25)':'background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.2)';
+            const typeLabel=isCCM?'CCM':isPHQ?'PHQ-9':'Daily';
+            html+=`<div class="vchip${isDone?' done':''}" style="${chipStyle}">
+              <div style="flex:1;min-width:0">
+                <div class="vname">${pt?pt.last+', '+pt.first:'—'}</div>
+                <div class="vtype" style="color:${isCCM?'var(--am)':isPHQ?'var(--pu)':'var(--gr)'}">${typeLabel}</div>
+              </div>
+              ${!isDone?`<button class="vok" onclick="markDone(${v.id})" title="Mark done">✓</button>`:''}
+              <button class="vbtn" onclick="delVis(${v.id})" title="Remove">✕</button>
+            </div>`;
+          });
+          html+='</div>'; // day-col
+        });
+        html+='</div>'; // sched-grid
+      }
+      html+='</div>'; // lpn block
+    });
+  }
+  html+='</div>'; // card
+  $i('fd-pane').innerHTML=html;
+}
+
+// ─── PSYCH PANE ──────────────────────────────────────────────
+function renderPsychPane(fac){
+  const psychProviders=fac.psychProviders||[];
+  const fps=patients.filter(p=>+p.fid===curFid);
+  const today=todayStr();
+  const ym=monthKey(today);
+
+  let html=`<div class="card">
+    <div style="font-weight:700;font-size:14px;color:var(--pu);margin-bottom:12px">🧠 Psych Schedule</div>`;
+  if(!psychProviders.length){
+    html+=`<div class="wbox">No psych providers assigned. Edit the facility to add psych providers.</div>`;
+  } else {
+    const psychVis=visits.filter(v=>+v.fid===curFid&&v.provType==='Psych'&&v.status==='scheduled'&&monthKey(v.date)===ym);
+    html+=`<div style="font-size:12px;color:var(--mu);margin-bottom:10px">${psychProviders.map(p=>p.name||p).join(', ')} · ${psychVis.length} visits this month</div>`;
+    const pb={};patients.forEach(p=>pb[p.id]=p);
+    const byDate={};
+    psychVis.forEach(v=>{if(!byDate[v.date])byDate[v.date]=[];byDate[v.date].push(v);});
+    if(Object.keys(byDate).length){
+      html+='<div class="sched-grid">';
+      Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([date,dvs])=>{
+        html+=`<div class="day-col"><div class="day-head"><span class="day-name">${dLabel(date)}</span><button class="btn bp bsm" style="padding:1px 5px;font-size:10px" onclick="openAddVisForProv('Psych','${(psychProviders[0]?.name||'')}','${date}')">+</button></div>`;
+        dvs.forEach(v=>{const p=pb[v.pid];html+=`<div class="vchip" style="background:rgba(163,113,247,.1);border-color:rgba(163,113,247,.25)"><div style="flex:1;min-width:0"><div class="vname">${p?p.last+', '+p.first:'—'}</div><div class="vtype">${v.type}</div></div><button class="vok" onclick="markDone(${v.id})">✓</button><button class="vbtn" onclick="delVis(${v.id})">✕</button></div>`;});
+        html+='</div>';
+      });
+      html+='</div>';
+    } else {
+      html+=`<div class="empty">No psych visits this month. Add manually using the + button.</div>`;
+      html+=`<button class="btn bsm" style="margin-top:8px" onclick="openAddVisForProv('Psych','${psychProviders[0]?.name||''}','${today}')">+ Add Psych Visit</button>`;
+    }
+  }
+  html+='</div>';
+  $i('fd-pane').innerHTML=html;
+}
+
+// ─── CENSUS PANE ─────────────────────────────────────────────
+let censusFilter='all';
+function setCensusFilter(f,btn){
+  censusFilter=f;
+  document.querySelectorAll('#census-filter-tabs .tab').forEach(b=>b.classList.remove('act'));
+  if(btn)btn.classList.add('act');
+  renderFacDetail();
+}
+
+function renderCensusPane(fac){
+  let fps=patients.filter(p=>+p.fid===curFid);
+  if(censusFilter!=='all') fps=fps.filter(p=>p.type===censusFilter);
+  const lt=patients.filter(p=>+p.fid===curFid&&p.type==='long-term').length;
+  const sk=patients.filter(p=>+p.fid===curFid&&p.type==='skilled').length;
+  const na=patients.filter(p=>+p.fid===curFid&&p.type==='new-admission').length;
+
+  let html=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="stit" style="margin-bottom:0">Patient Census (${patients.filter(p=>+p.fid===curFid).length} total · ${lt} LT · ${sk} Skilled · ${na} New Admit)</div>
+      <div class="tabs" id="census-filter-tabs">
+        <button class="tab ${censusFilter==='all'?'act':''}" onclick="setCensusFilter('all',this)">All</button>
+        <button class="tab ${censusFilter==='long-term'?'act':''}" onclick="setCensusFilter('long-term',this)">Long-Term</button>
+        <button class="tab ${censusFilter==='skilled'?'act':''}" onclick="setCensusFilter('skilled',this)">Skilled</button>
+        <button class="tab ${censusFilter==='new-admission'?'act':''}" onclick="setCensusFilter('new-admission',this)">New Admits</button>
+        <button class="tab ${censusFilter==='assisted-living'?'act':''}" onclick="setCensusFilter('assisted-living',this)">Assisted Living</button>
+      </div>
+    </div>
+    <div class="tw"><table><thead><tr><th>Patient</th><th>DOB</th><th>Sex</th><th>Type</th><th>Admit Date</th><th>Scheduled Visits</th><th>Actions</th></tr></thead><tbody>`;
+
+  fps.forEach(p=>{
+    const pv=visits.filter(v=>v.pid===p.id&&v.status==='scheduled');
+    const typeColor={'long-term':'var(--ac)',skilled:'var(--am)','new-admission':'var(--pu)','assisted-living':'#34d399'}[p.type]||'var(--mu)';
+    const typeLbl={'long-term':'Long-Term','skilled':'Skilled','new-admission':'New Admit','assisted-living':'Assisted Living'}[p.type]||p.type;
+    html+=`<tr>
+      <td style="font-weight:700">${p.last}, ${p.first}</td>
+      <td style="font-size:12px;color:var(--mu)">${p.dob||'—'}</td>
+      <td>${p.sex||'—'}</td>
+      <td><span class="badge" style="color:${typeColor};border:1px solid currentColor;background:transparent">${typeLbl}</span></td>
+      <td style="font-size:12px;color:var(--mu)">${p.admit||'—'}</td>
+      <td style="font-size:12px">${pv.length} upcoming</td>
+      <td><div class="row">
+        <button class="btn bsm" onclick="openEditPat(${p.id})">✏ Edit</button>
+        <button class="btn br bsm" onclick="deletePat(${p.id})">✕</button>
+      </div></td>
+    </tr>`;
+  });
+  html+=`</tbody></table>${!fps.length?'<div class="empty">No patients</div>':''}</div></div>`;
+  $i('fd-pane').innerHTML=html;
+}
+
+// ─── ADD VISIT MODAL ─────────────────────────────────────────
+let _addVisProvType='NP', _addVisProv='', _addVisDate='';
+function openAddVisForProv(provType,prov,date){
+  _addVisProvType=provType;_addVisProv=prov;_addVisDate=date;
+  $i('addvis-title').textContent='Add Visit — '+dLabel(date);
+  $i('addvis-date').value=date;
+  $i('addvis-prov').value=prov;
+  // Populate patients for this facility
+  const fps=patients.filter(p=>+p.fid===curFid);
+  $i('addvis-pat').innerHTML='<option value="">— Select Patient —</option>'+fps.map(p=>`<option value="${p.id}">${p.last}, ${p.first}</option>`).join('');
+  // Visit types
+  const types=getVisitTypesForProv(provType);
+  $i('addvis-type').innerHTML=types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  openModal('m-addvis');
+}
+function getVisitTypesForProv(provType){
+  const ruleTypes=rules.filter(r=>r.provType===provType).map(r=>r.name);
+  const extras={
+    NP:['Acute Visit – Telehealth','Acute Visit – In Person','Telehealth Follow-Up',
+        'Smoking Cessation Counseling','Alcohol Use Counseling','Advance Care Planning',
+        'Diabetic Foot Exam','Pain Assessment','Wound Assessment'],
+    Physician:['Acute Visit – Physician','Advance Care Planning'],
+    LPN:['LPN Wound Care','LPN Medication Pass','LPN Education','LPN Skin Assessment'],
+    Psych:['Psychiatric Evaluation','Therapy Session','Mental Health Follow-Up','Crisis Intervention']
+  };
+  return [...new Set([...ruleTypes,...(extras[provType]||[])])];
+}
+function saveAddVis(){
+  const pid=+$i('addvis-pat').value;
+  if(!pid){toast('⚠ Select a patient');return;}
+  const v={
+    id:++nid,pid,fid:curFid,
+    type:$i('addvis-type').value,prov:$i('addvis-prov').value,
+    provType:_addVisProvType,date:$i('addvis-date').value,
+    status:'scheduled',optional:false
+  };
+  visits.push(v);
+  closeModal('m-addvis');
+  renderFacDetail();
+  // Save visit and updated nid to DB
+  syncVis(v).then(()=>saveNid()).then(()=>toast('✓ Visit saved'));
+}
+
+// ════════════════════════════════════════════════════════════════
+// PATIENTS
+// ════════════════════════════════════════════════════════════════
+function openAddPat(){
+  $i('np-fac').innerHTML=facilities.map(f=>`<option value="${f.id}" ${f.id===curFid?'selected':''}>${f.name}</option>`).join('');
+  $i('np-admit').value=todayStr();
+  openModal('m-addpat');
+}
+function savePat(){
+  const last=$i('np-last').value.trim(),first=$i('np-first').value.trim();
+  if(!last||!first){toast('⚠ Name required');return;}
+  const fid=+$i('np-fac').value;
+  const p={id:++nid,fid,last,first,dob:$i('np-dob').value,sex:$i('np-sex').value,
+    type:$i('np-type').value,admit:$i('np-admit').value||todayStr()};
+  patients.push(p);
+  // Generate visits for just this patient
+  const fac=facilities.find(f=>f.id===fid);
+  if(fac) genVisitsForPatient(p,fac);
+  closeModal('m-addpat');
+  renderFacDetail();updateSb();
+  syncPat(p).then(async()=>{
+    await saveNid();
+    const pv=visits.filter(v=>v.pid===p.id);
+    for(const v of pv) await syncVis(v);
+    toast('✓ Patient added and schedule saved');
+  });
+}
+
+function openEditPat(id){
+  const p=patients.find(x=>x.id===+id);if(!p)return;
+  $i('ep-id').value=p.id;
+  $i('ep-last').value=p.last;$i('ep-first').value=p.first;
+  $i('ep-dob').value=p.dob||'';$i('ep-sex').value=p.sex||'M';
+  $i('ep-admit').value=p.admit||'';$i('ep-type').value=p.type||'long-term';
+  $i('ep-fac').innerHTML=facilities.map(f=>`<option value="${f.id}" ${f.id===p.fid?'selected':''}>${f.name}</option>`).join('');
+  $i('ep-type-warn').style.display='none';
+  openModal('m-editpat');
+}
+function showTypeChangeWarning(){$i('ep-type-warn').style.display='block';}
+function showCustomTypeField(){
+  const val=$i('rule-applies').value;
+  $i('rule-custom-type-row').style.display=val==='custom'?'block':'none';
+  if(val==='custom') $i('rule-custom-type').focus();
+}
+
+// Track custom patient types added by user
+let customPatientTypes=JSON.parse(localStorage.getItem('snf_custom_types')||'[]');
+
+function getCustomAppliesValue(){
+  const sel=$i('rule-applies').value;
+  if(sel!=='custom') return sel;
+  const custom=$i('rule-custom-type').value.trim().toLowerCase().replace(/\s+/g,'-');
+  if(!custom){$i('rule-err').textContent='Enter a custom type name.';$i('rule-err').style.display='block';return null;}
+  // Register this custom type if new
+  if(!customPatientTypes.includes(custom)){
+    customPatientTypes.push(custom);
+    localStorage.setItem('snf_custom_types',JSON.stringify(customPatientTypes));
+    addCustomTypeToDropdowns(custom);
+  }
+  return custom;
+}
+
+function addCustomTypeToDropdowns(type){
+  const label=type.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  // Add to patient type dropdowns
+  ['np-type','ep-type'].forEach(id=>{
+    const sel=$i(id);
+    if(sel&&![...sel.options].some(o=>o.value===type)){
+      const opt=new Option(label,type);
+      sel.add(opt);
+    }
+  });
+  // Add to rule applies dropdown
+  const ruleApplies=$i('rule-applies');
+  if(ruleApplies&&![...ruleApplies.options].some(o=>o.value===type)){
+    const customOpt=$i('rule-applies').querySelector('[value="custom"]');
+    const opt=new Option(label+' Only',type);
+    ruleApplies.insertBefore(opt,customOpt);
+  }
+}
+
+function loadCustomTypes(){
+  customPatientTypes.forEach(t=>addCustomTypeToDropdowns(t));
+}
+function updatePat(){
+  const id=+$i('ep-id').value;
+  const p=patients.find(x=>x.id===id);if(!p)return;
+  const origType=p.type,origFid=p.fid;
+  p.last=$i('ep-last').value.trim();p.first=$i('ep-first').value.trim();
+  p.dob=$i('ep-dob').value;p.sex=$i('ep-sex').value;
+  p.admit=$i('ep-admit').value;p.type=$i('ep-type').value;
+  p.fid=+$i('ep-fac').value;
+  const typeChanged=p.type!==origType,facChanged=p.fid!==origFid;
+  closeModal('m-editpat');
+  if(typeChanged||facChanged){
+    // Regenerate ONLY this patient's schedule
+    regenOnePatient(p);
+  }
+  renderFacDetail();renderAllPats();updateSb();
+  syncPat(p).then(()=>toast('✓ Patient updated'));
+}
+function deletePat(id){
+  id=+id;
+  const p=patients.find(x=>x.id===id);
+  if(!confirm(`Delete ${p?p.last+', '+p.first:'this patient'}?`))return;
+  closeModal('m-editpat');
+  // Remove visits
+  const pvids=visits.filter(v=>v.pid===id).map(v=>v.id);
+  visits=visits.filter(v=>v.pid!==id);
+  patients=patients.filter(p=>p.id!==id);
+  pvids.forEach(vid=>delVisFromDB(vid));
+  if(_sbPatMap[id]){sbDel('patients',_sbPatMap[id]);delete _sbPatMap[id];}
+  renderFacDetail();renderAllPats();updateSb();toast('✓ Patient removed');
+}
+
+// ════════════════════════════════════════════════════════════════
+// ALL PATIENTS / ALL VISITS
+// ════════════════════════════════════════════════════════════════
+function setApFilter(f,btn){
+  apFilter=f;
+  document.querySelectorAll('#page-allpats .tabs .tab').forEach(b=>b.classList.remove('act'));
+  if(btn)btn.classList.add('act');renderAllPats();
+}
+function renderAllPats(){
+  const q=($i('ap-search').value||'').toLowerCase();
+  const ff=$i('ap-fac').value;
+  let pats=patients;
+  if(ff) pats=pats.filter(p=>String(p.fid)===ff);
+  if(apFilter!=='all') pats=pats.filter(p=>p.type===apFilter);
+  if(q) pats=pats.filter(p=>(p.last+p.first).toLowerCase().includes(q));
+  $i('allpats-sub').textContent=pats.length+' patients';
+  const facMap={};facilities.forEach(f=>facMap[f.id]=f);
+  $i('ap-tbody').innerHTML=pats.map(p=>{
+    const f=facMap[p.fid];
+    const lpn=(f?.lpns||[]).find(l=>l.id===p.lpnId);
+    const typeLbl={'long-term':'Long-Term','skilled':'Skilled','new-admission':'New Admit','assisted-living':'Assisted Living'}[p.type]||p.type;
+    return`<tr>
+      <td style="font-weight:600">${p.last}, ${p.first}</td>
+      <td style="font-size:12px">${f?f.name:'—'}</td>
+      <td><span class="badge bx">${typeLbl}</span></td>
+      <td style="font-size:12px;color:var(--mu)">${p.admit||'—'}</td>
+      <td style="font-size:12px;color:var(--mu)">${lpn?lpn.name:'—'}</td>
+      <td><button class="btn bsm" onclick="openEditPat(${p.id})">Edit</button></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">No patients found</td></tr>';
+}
+
+function renderAllVis(){
+  const ff=$i('av-fac').value;
+  const pf=$i('av-ptype').value;
+  const sf=$i('av-status').value;
+  const df=$i('av-date').value;
+  let vs=visits;
+  if(ff) vs=vs.filter(v=>String(v.fid)===ff);
+  if(pf) vs=vs.filter(v=>v.provType===pf);
+  if(sf) vs=vs.filter(v=>v.status===sf);
+  if(df) vs=vs.filter(v=>v.date===df);
+  vs=vs.sort((a,b)=>a.date.localeCompare(b.date));
+  $i('allvis-sub').textContent=vs.length+' visits';
+  const pb={};patients.forEach(p=>pb[p.id]=p);
+  const fb={};facilities.forEach(f=>fb[f.id]=f.name);
+  const SM={scheduled:{l:'Scheduled',c:'bb'},completed:{l:'Completed',c:'bg_'},cancelled:{l:'Cancelled',c:'br_'}};
+  $i('av-tbody').innerHTML=vs.slice(0,200).map(v=>{
+    const p=pb[v.pid],s=SM[v.status]||SM.scheduled;
+    return`<tr>
+      <td class="mono" style="font-size:12px">${v.date}</td>
+      <td style="font-weight:600;font-size:13px">${p?p.last+', '+p.first:'—'}<div style="font-size:10px;color:var(--mu)">${fb[v.fid]||'—'}</div></td>
+      <td style="font-size:12px">${fb[v.fid]||'—'}</td>
+      <td style="font-size:12px">${v.type}${v.optional?'<span class="opt-badge">opt</span>':''}</td>
+      <td style="font-size:12px;color:var(--mu)">${v.prov||'—'}<span style="font-size:10px"> (${v.provType})</span></td>
+      <td><span class="badge ${s.c}">${s.l}</span></td>
+      <td><div class="row">
+        ${v.status==='scheduled'?`<button class="btn bg bsm" onclick="markDoneAll(${v.id})">✓</button>`:''}
+        <button class="btn br bsm" onclick="delVisAll(${v.id})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">No visits found</td></tr>';
+}
+function markDoneAll(id){markDone(+id);renderAllVis();}
+function delVisAll(id){delVis(+id);renderAllVis();}
+function openAddVisManual(){
+  $i('mv-pat').innerHTML='<option value="">— Patient —</option>'+patients.map(p=>`<option value="${p.id}">${p.last}, ${p.first}</option>`).join('');
+  $i('mv-date').value=todayStr();
+  openModal('m-manvis');
+}
+function mvFill(){
+  const p=patients.find(x=>x.id===+$i('mv-pat').value);if(!p)return;
+  const f=facilities.find(x=>x.id===+p.fid);if(!f)return;
+  $i('mv-prov').value=f.np||'';$i('mv-pt').value='NP';
+}
+function saveManVis(){
+  const pid=+$i('mv-pat').value,date=$i('mv-date').value;
+  if(!pid||!date){toast('⚠ Patient and date required');return;}
+  const p=patients.find(x=>x.id===pid);
+  const v={id:++nid,pid,fid:p?p.fid:0,type:$i('mv-type').value,prov:$i('mv-prov').value,
+    provType:$i('mv-pt').value,date,status:$i('mv-status').value,optional:false};
+  visits.push(v);
+  closeModal('m-manvis');renderAllVis();
+  syncVis(v).then(()=>toast('✓ Visit saved'));
+}
+
+// ════════════════════════════════════════════════════════════════
+// SCHEDULE RULES UI
+// ════════════════════════════════════════════════════════════════
+function renderRules(){
+  const byProv={NP:[],Physician:[],LPN:[],Psych:[]};
+  rules.forEach(r=>{if(byProv[r.provType])byProv[r.provType].push(r);else byProv.NP.push(r);});
+  const provColors={NP:'var(--ac)',Physician:'var(--pi)',LPN:'var(--gr)',Psych:'var(--pu)'};
+  const freqOpts=Object.entries(FREQ_LABELS).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  const appliesOpts=`<option value="all">All Patients</option><option value="long-term">Long-Term Only</option><option value="skilled">Skilled Only</option><option value="new-admission">New Admits Only</option><option value="assisted-living">Assisted Living Only</option><option value="long-term,new-admission">Long-Term + New Admits</option><option value="skilled,new-admission">Skilled + New Admits</option><option value="long-term,assisted-living">Long-Term + Assisted Living</option><option value="assisted-living,new-admission">Assisted Living + New Admits</option>`;
+
+  let html=`<div class="card" style="margin-bottom:14px;background:rgba(88,166,255,.05);border-color:rgba(88,166,255,.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700;font-size:14px;color:var(--ac)">Schedule Rules</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:2px">Edit rules inline below, then click <strong>Save All Rules</strong> to persist changes.</div>
+      </div>
+      <div class="row">
+        <button class="btn bp" onclick="saveAllRules()">💾 Save All Rules</button>
+        <button class="btn bsm" onclick="openEditRule(null)">+ New Rule</button>
+      </div>
+    </div>
+  </div>`;
+
+  Object.entries(byProv).forEach(([prov,rlist])=>{
+    if(!rlist.length)return;
+    html+=`<div class="card" style="margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;color:${provColors[prov]};margin-bottom:12px">${prov} Rules
+        <span style="font-size:11px;color:var(--mu);font-weight:400;margin-left:8px">${rlist.filter(r=>r.active).length}/${rlist.length} active</span>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Active</th><th>Rule Name</th><th>Applies To</th><th>Frequency</th><th>Months</th><th>Optional</th><th>Actions</th></tr></thead>
+        <tbody>`;
+    rlist.forEach(r=>{
+      html+=`<tr id="rule-row-${r.id}" style="${!r.active?'opacity:.6':''}">
+        <td style="text-align:center">
+          <input type="checkbox" data-rule="${r.id}" data-field="active" ${r.active?'checked':''}
+            style="width:16px;height:16px;accent-color:var(--ac);cursor:pointer"
+            onchange="ruleFieldChange('${r.id}','active',this.checked)">
+        </td>
+        <td><input class="inp" style="min-width:180px;font-size:12px;padding:4px 8px" 
+            data-rule="${r.id}" data-field="name" value="${r.name}"
+            onchange="ruleFieldChange('${r.id}','name',this.value)"></td>
+        <td><select class="sel" style="font-size:12px;padding:4px 8px;min-width:140px"
+            data-rule="${r.id}" data-field="applies"
+            onchange="ruleFieldChange('${r.id}','applies',this.value)">
+            ${appliesOpts.replace(`value="${r.applies||'all'}"`,`value="${r.applies||'all'}" selected`)}
+          </select></td>
+        <td><select class="sel" style="font-size:12px;padding:4px 8px;min-width:160px"
+            data-rule="${r.id}" data-field="freq"
+            onchange="ruleFieldChange('${r.id}','freq',this.value)">
+            ${freqOpts.replace(`value="${r.freq}"`,`value="${r.freq}" selected`)}
+          </select></td>
+        <td><input type="number" class="inp" style="width:60px;font-size:12px;padding:4px 8px;text-align:center"
+            data-rule="${r.id}" data-field="months" value="${r.months||3}" min="1" max="24"
+            onchange="ruleFieldChange('${r.id}','months',+this.value)"></td>
+        <td style="text-align:center">
+          <input type="checkbox" data-rule="${r.id}" data-field="optional" ${r.optional?'checked':''}
+            style="width:16px;height:16px;accent-color:var(--am);cursor:pointer"
+            onchange="ruleFieldChange('${r.id}','optional',this.checked)">
+        </td>
+        <td><div class="row">
+          <button class="btn bsm" onclick="openEditRule('${r.id}')">⋯</button>
+          <button class="btn br bsm" onclick="deleteRuleById('${r.id}')">✕</button>
+        </div></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+  });
+  $i('rules-list').innerHTML=html||'<div class="empty">No rules defined.</div>';
+}
+
+// Track in-memory changes as user edits inline
+function ruleFieldChange(id,field,val){
+  const r=rules.find(x=>x.id===id);if(!r)return;
+  r[field]=val;
+  // Visual feedback on the row
+  const row=$i('rule-row-'+id);
+  if(row){
+    row.style.opacity=field==='active'&&!val?'0.6':'1';
+    row.style.background='rgba(88,166,255,.04)'; // tint to show unsaved
+  }
+}
+
+async function saveAllRules(){
+  const btn=document.querySelector('[onclick="saveAllRules()"]');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  let saved=0,failed=0;
+  for(const r of rules){
+    try{
+      if(_sbRuleMap[r.id]){
+        await sbUpd('rules',_sbRuleMap[r.id],{data:r});
+        saved++;
+      } else {
+        const row=await sbIns('rules',{data:r});
+        if(row){_sbRuleMap[r.id]=row.id;saved++;}
+        else failed++;
+      }
+    }catch(e){
+      console.error('Failed to save rule',r.id,e);
+      failed++;
+    }
+  }
+  if(btn){btn.textContent='💾 Save All Rules';btn.disabled=false;}
+  document.querySelectorAll('[id^="rule-row-"]').forEach(row=>row.style.background='');
+  if(failed>0){
+    setDbStatus(false,`⚠ ${failed} rules failed to save`);
+    alert(`⚠ ${failed} rules failed to save to the database.\n\nThis usually means the Supabase connection is blocked.\n\nPlease check:\n1. The DB status indicator in the bottom-left (should show green)\n2. Open browser console (F12) and look for error messages`);
+  } else {
+    setDbStatus(true,`✓ ${saved} rules saved`);
+    toast(`✓ All ${saved} rules saved`);
+  }
+  renderRules();
+}
+
+function deleteRuleById(id){
+  const r=rules.find(x=>x.id===id);
+  if(!confirm('Delete rule "'+( r?.name||id)+'"?\n\nThis cannot be undone.'))return;
+  const sbId=_sbRuleMap[id];
+  if(sbId){
+    sbDel('rules',sbId).then(()=>setDbStatus(true,'✓ Rule deleted from DB'));
+    delete _sbRuleMap[id];
+  } else {
+    console.warn('No Supabase row ID for rule',id,'- may not be saved to DB');
+  }
+  rules=rules.filter(x=>x.id!==id);
+  renderRules();
+  toast('✓ Rule deleted');
+}
+
+
+const FREQ_LABELS={
+  'monthly':'Monthly (once/month)','semi-monthly':'Semi-Monthly / Follow-Up (optional)',
+  'skilled-3x':'Skilled 3×/Week','every-60':'Every 60 Days','annual':'Annual',
+  'semi-annual':'Semi-Annual','new-admit':'New Admission (within 3 days)',
+  'weekly':'Weekly','quarterly':'Quarterly (90 days)','custom-days':'Every N Days'
+};
+
+function openEditRule(id){
+  const r=id?rules.find(x=>x.id===id):null;
+  $i('rule-title').textContent=r?'Edit Rule':'New Rule';
+  $i('rule-id').value=r?r.id:'';
+  $i('rule-name').value=r?r.name:'';
+  $i('rule-prov').value=r?r.provType:'NP';
+  $i('rule-applies').value=r?r.applies:'long-term';
+  $i('rule-freq').value=r?r.freq:'monthly';
+  $i('rule-sex').value=r?r.sex:'all';
+  $i('rule-months').value=r?r.months:3;
+  $i('rule-active').checked=r?r.active:true;
+  $i('rule-optional').checked=r?!!r.optional:false;
+  $i('rule-desc').value=r?r.desc||'':'';
+  $i('rule-del-btn').style.display=r?'inline-flex':'none';
+  $i('rule-err').style.display='none';
+  renderRuleFreqUI(r);
+  openModal('m-rule');
+}
+
+function renderRuleFreqUI(existing){
+  const freq=$i('rule-freq').value;
+  let html='';
+  if(freq==='custom-days'){
+    const n=existing?.freqN||30;
+    html=`<div><label class="lbl">Every N days</label><input class="inp" type="number" id="rule-freq-n" value="${n}" min="1" max="365" placeholder="e.g. 30 for monthly, 90 for quarterly"></div>`;
+  } else if(freq==='skilled-3x'){
+    html=`<div class="ibox">Combined NP + Physician visits cannot exceed 3 per week per patient. The system tracks both when scheduling.</div>`;
+  } else if(freq==='every-60'){
+    html=`<div class="ibox">Physician sees all LT patients every 60 days. Census is split evenly across physician scheduled days for balanced distribution.</div>`;
+  }
+  $i('rule-freq-extra').innerHTML=html;
+}
+
+function saveRule(){
+  const name=$i('rule-name').value.trim();
+  if(!name){$i('rule-err').textContent='Name required.';$i('rule-err').style.display='block';return;}
+  const freq=$i('rule-freq').value;
+  const existing_id=$i('rule-id').value;
+  const applies=getCustomAppliesValue();
+  if(!applies) return; // validation failed
+  const ruleObj={
+    id:existing_id||('r'+Date.now()),name,
+    provType:$i('rule-prov').value,
+    applies,
+    sex:$i('rule-sex').value,
+    freq,
+    months:+$i('rule-months').value||3,
+    active:$i('rule-active').checked,
+    optional:$i('rule-optional').checked,
+    desc:$i('rule-desc').value.trim()
+  };
+  if(freq==='custom-days') ruleObj.freqN=+($i('rule-freq-n')?.value||30);
+  if(existing_id) rules=rules.map(r=>r.id===existing_id?ruleObj:r);
+  else rules.push(ruleObj);
+  closeModal('m-rule');renderRules();
+  saveRuleToDB(ruleObj);
+}
+
+function toggleRule(id){
+  const r=rules.find(x=>x.id===id);if(!r)return;
+  r.active=!r.active;
+  renderRules();
+  saveRuleToDB(r);
+}
+
+async function saveRuleToDB(r){
+  try{
+    if(_sbRuleMap[r.id]){
+      await sbUpd('rules',_sbRuleMap[r.id],{data:r});
+      toast(`✓ Rule "${r.name}" ${r.active?'enabled':'saved'}`);
+    } else {
+      // No Supabase row yet — insert
+      const row=await sbIns('rules',{data:r});
+      if(row){
+        _sbRuleMap[r.id]=row.id;
+        toast(`✓ Rule "${r.name}" saved`);
+      } else {
+        toast('⚠ Rule saved locally only (DB unavailable)');
+      }
+    }
+  }catch(e){
+    console.error('saveRuleToDB error:',e);
+    toast('⚠ Rule saved locally — DB sync failed');
+  }
+}
+
+function deleteRule(){
+  const id=$i('rule-id').value;if(!id)return;
+  if(!confirm('Delete this rule?'))return;
+  if(_sbRuleMap[id]){sbDel('rules',_sbRuleMap[id]);delete _sbRuleMap[id];}
+  rules=rules.filter(r=>r.id!==id);
+  closeModal('m-rule');renderRules();toast('✓ Rule deleted');
+}
+
+// ════════════════════════════════════════════════════════════════
+// BULK UPLOAD
+// ════════════════════════════════════════════════════════════════
+let _bulkRows=[];
+function openBulk(){_bfid=curFid;_bulkRows=[];$i('bulk-preview').style.display='none';$i('bulk-txt').value='';$i('bulk-file').value='';openModal('m-bulk');}
+function handleFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{$i('bulk-txt').value=ev.target.result;parseBulk();};r.readAsText(f);}
+function handleDrop(e){e.preventDefault();$i('bulk-dz').classList.remove('drag');const f=e.dataTransfer.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{$i('bulk-txt').value=ev.target.result;parseBulk();};r.readAsText(f);}
+
+function parseDateFlex(s){
+  if(!s)return'';s=s.trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m)return`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  return s;
+}
+function parsePatientType(raw){
+  const s=(raw||'').toLowerCase().replace(/\s+/g,'').replace(/[^a-z]/g,'');
+  if(/skill/.test(s))return'skilled';
+  if(/assist|alf|al\b/.test(s))return'assisted-living';
+  if(/newadmit|newadmiss|admissoon|newadm/.test(s))return'new-admission';
+  if(/longterm|longtrm|lt$/.test(s))return'long-term';
+  return'long-term';
+}
+function parseBulk(){
+  const raw=$i('bulk-txt').value.trim();
+  if(!raw){toast('⚠ No data to parse');return;}
+  const cleaned=raw.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const lines=cleaned.split('\n').map(l=>l.trim()).filter(Boolean);
+  _bulkRows=[];
+  // Detect header
+  const firstLow=lines[0].toLowerCase().replace(/\s/g,'');
+  const hasHeader=firstLow.includes('last')||firstLow.includes('first')||firstLow.includes('resident')||firstLow.includes('birth')||firstLow.includes('type');
+  // Detect column order from header
+  let colLast=0,colFirst=1,colDob=2,colType=3,colSex=4,colAdmit=5;
+  if(hasHeader){
+    const cols=lines[0].split(',').map(c=>c.trim().toLowerCase().replace(/\s+/g,'').replace(/[^a-z]/g,''));
+    cols.forEach((c,i)=>{
+      if(/lastname|residentlast|last/.test(c))colLast=i;
+      else if(/firstname|residentfirst|first/.test(c))colFirst=i;
+      else if(/birth|dob/.test(c))colDob=i;
+      else if(/^type|patienttype/.test(c))colType=i;
+      else if(/sex|gender/.test(c))colSex=i;
+      else if(/admit|admission/.test(c))colAdmit=i;
+    });
+  }
+  const dataLines=hasHeader?lines.slice(1):lines;
+  dataLines.forEach(line=>{
+    if(!line.trim())return;
+    const p=line.split(',').map(s=>s.trim().replace(/^["']|["']$/g,''));
+    if(p.length<2)return;
+    const last=(p[colLast]||'').trim(),first=(p[colFirst]||'').trim();
+    if(!last&&!first)return;
+    const rawType=(p[colType]||'').trim();
+    _bulkRows.push({last,first,dob:parseDateFlex(p[colDob]||''),
+      sex:(p[colSex]||'F').toUpperCase().charAt(0)==='M'?'M':'F',
+      admit:parseDateFlex(p[colAdmit]||'')||todayStr(),
+      type:parsePatientType(rawType),rawType,
+      ok:!!(last&&first)});
+  });
+  if(!_bulkRows.length){toast('⚠ No rows parsed');return;}
+  const typeCounts={};_bulkRows.forEach(r=>typeCounts[r.type]=(typeCounts[r.type]||0)+1);
+  $i('bulk-preview-label').innerHTML=`<strong>${_bulkRows.length} patients parsed</strong> — `+Object.entries(typeCounts).map(([t,n])=>`${t}: ${n}`).join(' · ');
+  $i('bulk-preview-body').innerHTML=_bulkRows.map(r=>`<tr style="${r.ok?'':'opacity:.4'}">
+    <td>${r.last}, ${r.first}</td><td style="font-size:11px">${r.dob||'—'}</td><td>${r.sex}</td>
+    <td style="font-size:11px">${r.admit}</td>
+    <td style="font-size:11px;color:var(--mu)">${r.rawType}</td>
+    <td><span class="badge ${r.type==='skilled'?'ba':r.type==='new-admission'?'bpu_':'bb'}">${r.type}</span></td>
+    <td><span class="badge ${r.ok?'bg_':'br_'}">${r.ok?'OK':'Skip'}</span></td>
+  </tr>`).join('');
+  $i('bulk-preview').style.display='block';
+}
+
+function importBulk(){
+  if(!_bulkRows.length){parseBulk();return;}
+  const valid=_bulkRows.filter(r=>r.ok);
+  if(!valid.length){toast('⚠ No valid rows');return;}
+  const fid=_bfid||curFid;
+  const fac=facilities.find(f=>f.id===+fid);
+  if(!fac){toast('⚠ No facility selected');return;}
+  const activeRules=rules.filter(r=>r.active);
+  showLoader('Importing patients…');
+  // Add all patients first
+  const newPats=valid.map(r=>({id:++nid,fid:+fid,last:r.last,first:r.first,
+    dob:r.dob,sex:r.sex,type:r.type,admit:r.admit}));
+  newPats.forEach(p=>patients.push(p));
+  // Generate visits for all new patients
+  if(activeRules.length){
+    newPats.forEach(p=>{try{genVisitsForPatient(p,fac);}catch(e){console.warn(e);}});
+    // Redistribute NP, MD, and LPN
+    const months=new Set(visits.filter(v=>+v.fid===+fid).map(v=>monthKey(v.date)));
+    months.forEach(ym=>{redistributeNP(fid,ym);redistributeMD(fid,ym);redistributeLPN(fid,ym);});
+  }
+  fac.census=patients.filter(p=>+p.fid===+fid).length;
+  _bulkRows=[];
+  $i('bulk-txt').value='';
+  $i('bulk-preview').style.display='none';
+  closeModal('m-bulk');
+  hideLoader();
+  if(curFid)renderFacDetail();renderAllPats();updateSb();
+  // Sync to DB — batch insert patients then visits
+  (async()=>{
+    showLoader('Saving patients…');
+    // Batch insert all new patients
+    const patRows=newPats.map(p=>({data:p}));
+    const patResp=await fetch(`${SUPABASE_URL}/rest/v1/patients`,{
+      method:'POST',
+      headers:{...SB_HEADERS,Prefer:'return=representation'},
+      body:JSON.stringify(patRows)
+    });
+    if(patResp.ok){
+      const saved=await patResp.json();
+      if(Array.isArray(saved)) saved.forEach((row,i)=>{if(newPats[i]&&row?.id)_sbPatMap[newPats[i].id]=row.id;});
+    }
+    hideLoader();
+    // Then sync all facility visits
+    await syncFacilityVisits(+fid);
+    const newVis=visits.filter(v=>newPats.some(p=>p.id===v.pid));
+    const npV=newVis.filter(v=>v.provType==='NP').length;
+    const mdV=newVis.filter(v=>v.provType==='Physician').length;
+    const lpnV=newVis.filter(v=>v.provType==='LPN').length;
+    toast(`✓ ${newPats.length} patients · NP:${npV} MD:${mdV} LPN:${lpnV} visits saved`);
+  })();
+  alert(`✓ ${newPats.length} patients imported to ${fac.name}\n\n`+
+    Object.entries({'long-term':'Long-Term','skilled':'Skilled','new-admission':'New Admit','assisted-living':'Assisted Living'})
+      .map(([k,l])=>{const n=newPats.filter(p=>p.type===k).length;return n?`• ${l}: ${n}`:''})
+      .filter(Boolean).join('\n')+
+    `\n\n${visits.filter(v=>newPats.some(p=>p.id===v.pid)).length} visits scheduled.\n${activeRules.length===0?'\n⚠ No active rules — go to Schedule Rules tab.':''}`);
+}
+
+// ════════════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════════════
+async function runDbDiagnostics(){
+  showLoader('Running diagnostics…');
+  const results=[];
+  try{
+    // Count each table
+    for(const t of ['facilities','patients','visits','rules']){
+      const rows=await sbGet(t);
+      results.push(`${t}: ${rows.length} rows`);
+      if(t==='visits'&&rows.length>0){
+        // Show sample visit to verify structure
+        const sample=rows[0];
+        results.push(`  sample visit: id=${sample.id}, data.id=${sample.data?.id}, data.fid=${sample.data?.fid}`);
+      }
+    }
+    // Test write
+    const testResp=await fetch(`${SUPABASE_URL}/rest/v1/app_state`,{
+      method:'POST',
+      headers:{...SB_HEADERS,Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({key:'_diag_test',value:Date.now()})
+    });
+    results.push('Write test: '+(testResp.ok?'✓ OK':'✗ FAILED ('+testResp.status+')'));
+    // Test delete visits for facility
+    if(facilities.length){
+      const fid=facilities[0].id;
+      const delResp=await fetch(`${SUPABASE_URL}/rest/v1/visits?data->>fid=eq.${fid}`,
+        {method:'HEAD',headers:{...SB_HEADERS,'Prefer':'count=exact'}});
+      const count=delResp.headers.get('content-range')||'unknown';
+      results.push(`Delete filter test for fid=${fid}: content-range=${count}`);
+    }
+    hideLoader();
+    alert('DB Diagnostics\n\n'+results.join('\n'));
+  }catch(e){
+    hideLoader();
+    alert('Diagnostics error: '+e.message);
+  }
+}
+
+function showLoader(msg){$i('loader').style.display='flex';$i('loader-msg').textContent=msg||'Loading…';}
+function hideLoader(){$i('loader').style.display='none';}
+function toast(msg,dur=3000){
+  const t=$i('toast');t.textContent=msg;t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0',dur);
+}
+
+// Build DOW checkboxes on modal open
+$i('m-addfac').addEventListener('click',function(e){
+  if(e.target===this){closeModal('m-addfac');}
+});
+// Initialize DOW checkboxes
+buildDowCheckboxes('af-np-days',[1,3,4]); // default Mon/Wed/Thu
+buildDowCheckboxes('af-md-days',[2]); // default Tue
+$i('dash-date-pick').value=todayStr();
+
+// Keyboard escape to close modals
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    document.querySelectorAll('.ov.open').forEach(m=>m.classList.remove('open'));
+  }
+});
+// Click outside modal to close
+document.querySelectorAll('.ov').forEach(ov=>{
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
+});
+</script>
+
+<script>
+// Password auto-check on load
+if(sessionStorage.getItem('snf_auth')==='1'){
+  $i('pw-gate').style.display='none';
+  window.addEventListener('load',bootstrap);
+}
+</script>
+</body>
+</html>
